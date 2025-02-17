@@ -7,8 +7,8 @@ const API_CONFIG = {
     },
     // Em produção
     production: {
-        BASE_URL: 'api.trendgpt.com.br/api', // Você ajustará isso
-        GPT_MAKER_URL: 'api.trendgpt.com.br/api'
+        BASE_URL: 'https://plataforma-ia-back-50127e4cb1f5.herokuapp.com/api', // Você ajustará isso
+        GPT_MAKER_URL: 'https://plataforma-ia-back-50127e4cb1f5.herokuapp.com/api'
     }
 };
 
