@@ -7,8 +7,8 @@ const API_CONFIG = {
     },
     // Em produção
     production: {
-        BASE_URL: 'http://api.trendgpt.com.br/api', // Você ajustará isso
-        GPT_MAKER_URL: 'http://api.trendgpt.com.br/api'
+        BASE_URL: 'https://api.trendgpt.com.br/api', // Você ajustará isso
+        GPT_MAKER_URL: 'https://api.trendgpt.com.br/api'
     }
 };
 
