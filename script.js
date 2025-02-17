@@ -279,11 +279,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const state = {
         currentChatId: null,
         chatPollingInterval: null,
-        messagePollingInterval: null,
+        isPolling: false,
         recording: false,
         mediaRecorder: null,
         audioChunks: [],
-        aiController: null
+        aiController: null,
+        theme: localStorage.getItem('theme') || 'dark'
     };
 
     const api = new GPTMakerAPI();
@@ -824,7 +825,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Função para alternar o tema
+    function toggleTheme() {
+        state.theme = state.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', state.theme);
+        localStorage.setItem('theme', state.theme);
+        
+        // Atualiza o ícone
+        const themeIcon = document.querySelector('.theme-toggle-button .material-icons');
+        themeIcon.textContent = state.theme === 'dark' ? 'dark_mode' : 'light_mode';
+    }
+
     // Inicialização
+    document.documentElement.setAttribute('data-theme', state.theme);
+    const themeIcon = document.querySelector('.theme-toggle-button .material-icons');
+    themeIcon.textContent = state.theme === 'dark' ? 'dark_mode' : 'light_mode';
+
+    document.querySelector('.theme-toggle-button').addEventListener('click', toggleTheme);
+
     loadChats();
     initializeSearch();
 });
