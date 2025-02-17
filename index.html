@@ -34,13 +34,22 @@
         <div class="chat-area">
             <!-- Cabeçalho do chat -->
             <div class="chat-header">
-                <div class="chat-avatar">
-                    <img src="https://ui-avatars.com/api/?name=Assistant&background=random" alt="Avatar">
+                <div class="chat-header-left">
+                    <div class="chat-avatar">
+                        <img src="https://ui-avatars.com/api/?name=Assistant&background=random" alt="Avatar">
+                    </div>
+                    <div class="chat-header-info">
+                        <div class="chat-header-name">Selecione um chat</div>
+                        <div class="chat-header-status">
+                            <span class="material-icons" style="font-size: 12px; margin-right: 4px;">fiber_manual_record</span>
+                            Online
+                        </div>
+                    </div>
                 </div>
-                <div class="chat-header-info">
-                    <div class="chat-header-name">Selecione um chat</div>
-                    <div class="chat-header-status">Online</div>
-                </div>
+                <button class="toggle-ai-button" style="display: none;">
+                    <i class="fas fa-robot"></i>
+                    <span class="button-text">Pausar IA</span>
+                </button>
             </div>
 
             <!-- Área de mensagens -->
@@ -66,6 +75,7 @@
             </div>
         </div>
     </div>
+    <script src="js/aiController.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

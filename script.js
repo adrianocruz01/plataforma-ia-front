@@ -90,12 +90,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async uploadImage(imageFile) {
-            console.log('Arquivo a ser enviado:', imageFile);
+            // console.log('Arquivo a ser enviado:', imageFile);
             
             const formData = new FormData();
             formData.append('file', imageFile, imageFile.name);
             
-            console.log('FormData criado:', formData);
+            // console.log('FormData criado:', formData);
             
             const response = await fetch(`${API_BASE_URL}/upload-image`, {
                 method: 'POST',
@@ -124,8 +124,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async sendMessage(chatId, message) {
-            console.log('Enviando mensagem para chat:', chatId);
-            console.log('Conteúdo da mensagem:', message);
+            // console.log('Enviando mensagem para chat:', chatId);
+            // console.log('Conteúdo da mensagem:', message);
             
             // Se for string (texto), envia como { message }
             // Se for objeto (áudio/imagem), envia direto
@@ -138,8 +138,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(body)
             });
 
-            console.log('Resposta do servidor:', response);
             return response;
+        }
+
+        async startHumanTalk(chatId) {
+            return this.request(`/chat/${chatId}/start-human-talk`, {
+                method: 'PUT'
+            });
+        }
+
+        async stopHumanTalk(chatId) {
+            return this.request(`/chat/${chatId}/stop-human-talk`, {
+                method: 'PUT'
+            });
         }
     }
 
@@ -227,10 +238,70 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    const state = new ChatState();
+    class AIController {
+        constructor(api) {
+            this.api = api;
+            this.chatId = null;
+            this.isHumanMode = false;
+            this.onAIStateChangeCallbacks = [];
+        }
+
+        initialize(chatId, humanTalk) {
+            this.chatId = chatId;
+            this.isHumanMode = humanTalk;
+            this.notifyAIStateChange();
+        }
+
+        async toggleAIMode() {
+            try {
+                if (this.isHumanMode) {
+                    await this.api.stopHumanTalk(this.chatId);
+                } else {
+                    await this.api.startHumanTalk(this.chatId);
+                }
+                this.isHumanMode = !this.isHumanMode;
+                this.notifyAIStateChange();
+            } catch (error) {
+                console.error('Erro ao alternar modo IA:', error);
+                throw error;
+            }
+        }
+
+        onAIStateChange(callback) {
+            this.onAIStateChangeCallbacks.push(callback);
+        }
+
+        notifyAIStateChange() {
+            this.onAIStateChangeCallbacks.forEach(callback => callback({ isHumanMode: this.isHumanMode }));
+        }
+    }
+
+    const state = {
+        currentChatId: null,
+        chatPollingInterval: null,
+        messagePollingInterval: null,
+        recording: false,
+        mediaRecorder: null,
+        audioChunks: [],
+        aiController: null
+    };
+
     const api = new GPTMakerAPI();
     const notifications = new NotificationManager();
     const audioRecorder = new AudioRecorder();
+
+    // Inicializa o controlador da IA
+    state.aiController = new AIController(api);
+
+    // Registra callback para mudanças de estado da IA
+    state.aiController.onAIStateChange(({ isHumanMode }) => {
+        const toggleButton = document.querySelector('.toggle-ai-button');
+        if (toggleButton) {
+            toggleButton.className = `toggle-ai-button ${isHumanMode ? 'paused' : ''}`;
+            toggleButton.querySelector('.button-text').textContent = 
+                isHumanMode ? 'Ativar IA' : 'Pausar IA';
+        }
+    });
 
     // Event listener para o botão de anexar
     attachButton.addEventListener('click', () => {
@@ -247,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Upload da imagem para o Cloudinary
             const imageUrl = await api.uploadImage(file);
-            console.log('URL da imagem após upload:', imageUrl);
+            // console.log('URL da imagem após upload:', imageUrl);
             
             // Envia a URL da imagem
             const messageData = {
@@ -326,13 +397,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Função para iniciar o polling de mensagens
     function startMessagePolling() {
         // Limpa qualquer polling anterior
-        if (state.pollingInterval) {
-            clearInterval(state.pollingInterval);
+        if (state.messagePollingInterval) {
+            clearInterval(state.messagePollingInterval);
         }
 
         // Inicia novo polling apenas se houver um chat selecionado
         if (state.currentChatId) {
-            state.pollingInterval = setInterval(async () => {
+            state.messagePollingInterval = setInterval(async () => {
                 try {
                     const messages = await api.getChatMessages(state.currentChatId);
                     
@@ -361,44 +432,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Função para parar o polling
     function stopMessagePolling() {
-        if (state.pollingInterval) {
-            clearInterval(state.pollingInterval);
-            state.pollingInterval = null;
+        if (state.messagePollingInterval) {
+            clearInterval(state.messagePollingInterval);
+            state.messagePollingInterval = null;
         }
     }
 
     async function selectChat(chat) {
-        // Remove active class from all chats
-        document.querySelectorAll('.chat-item').forEach(item => {
-            item.classList.remove('active');
-        });
-
-        // Add active class to selected chat
+        // Remove a classe active de todos os chats
+        document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+        
+        // Adiciona a classe active ao chat selecionado
         const selectedChat = document.querySelector(`.chat-item[data-id="${chat.id}"]`);
         if (selectedChat) {
             selectedChat.classList.add('active');
         }
 
-        // Update chat header with the same avatar from chat list
+        // Atualiza o cabeçalho do chat com o avatar
         const avatarUrl = chat.picture || chat.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(chat.name)}&background=random`;
-        const chatHeader = document.querySelector('.chat-header');
-        chatHeader.innerHTML = `
-            <div class="chat-avatar">
-                <img src="${avatarUrl}" alt="${chat.name}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(chat.name)}&background=random'">
-            </div>
-            <div class="chat-header-info">
-                <div class="chat-header-name">${chat.name}</div>
-                <div class="chat-header-status">
-                    <span class="material-icons" style="font-size: 12px; margin-right: 4px;">fiber_manual_record</span>
-                    Online
-                </div>
-            </div>
-        `;
+        document.querySelector('.chat-header .chat-avatar img').src = avatarUrl;
+        document.querySelector('.chat-header .chat-header-name').textContent = chat.name;
 
+        // Configura o botão de toggle da IA
+        const toggleButton = document.querySelector('.toggle-ai-button');
+        toggleButton.style.display = 'flex';
+        
+        // Inicializa o controlador da IA com o estado atual do chat
+        state.aiController.initialize(chat.id, chat.humanTalk);
+        
+        // Adiciona o event listener para o botão
+        toggleButton.onclick = async () => {
+            try {
+                await state.aiController.toggleAIMode();
+            } catch (error) {
+                console.error('Erro ao alternar modo IA:', error);
+                notifications.error('Erro ao alternar modo IA. Tente novamente.');
+            }
+        };
+
+        // Atualiza o ID do chat atual
         state.currentChatId = chat.id;
-        state.lastMessageTimestamp = null; // Reseta o timestamp ao trocar de chat
+        
+        // Carrega as mensagens do chat
         await loadMessages(chat.id);
-        startMessagePolling(); // Inicia o polling ao selecionar um chat
+        
+        // Remove o badge de não lido
+        const unreadBadge = selectedChat.querySelector('.unread-badge');
+        if (unreadBadge) {
+            unreadBadge.style.display = 'none';
+        }
     }
 
     // Função para ordenar chats por última mensagem
@@ -425,7 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.chatPollingInterval = setInterval(async () => {
             try {
                 const response = await api.getChats();
-                console.log('Resposta dos chats:', response);
+                // console.log('Resposta dos chats:', response);
                 
                 // Se a resposta tem a propriedade 'chats', usa ela
                 const chats = response.chats || response;
@@ -574,7 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             notifications.info('Carregando chats...');
             const response = await api.getChats();
-            console.log('Resposta dos chats:', response);
+            // console.log('Resposta dos chats:', response);
             
             // Se a resposta tem a propriedade 'chats', usa ela
             const chats = response.chats || response;
@@ -719,11 +801,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const selectedChat = document.querySelector('.chat-item.active');
                 if (selectedChat) {
                     const chatId = selectedChat.dataset.id;
-                    console.log('Enviando áudio para chat:', chatId);
+                    // console.log('Enviando áudio para chat:', chatId);
                     
                     // Primeiro faz upload para o Cloudinary
                     const audioUrl = await api.uploadAudio(audioBlob);
-                    console.log('URL do áudio após upload:', audioUrl);
+                    // console.log('URL do áudio após upload:', audioUrl);
                     
                     // Envia apenas a URL do áudio
                     const messageData = {
