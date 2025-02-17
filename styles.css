@@ -129,6 +129,23 @@ body {
     border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
+.header-icons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.header-icons .material-icons {
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background-color 0.3s ease;
+}
+
+.header-icons .material-icons:hover {
+    background-color: var(--color-hover);
+}
+
 .user-info {
     display: flex;
     align-items: center;
