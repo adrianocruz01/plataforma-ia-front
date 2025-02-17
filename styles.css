@@ -478,7 +478,7 @@ body {
 .message-time {
     font-size: 12px;
     margin-top: 4px;
-    color: var(--color-text-secondary);
+    color: var(--shadow-soft);
     opacity: 0.9;
     font-weight: bold;
 }
