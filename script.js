@@ -7,8 +7,8 @@ const API_CONFIG = {
     },
     // Em produção
     production: {
-        BASE_URL: 'https://plataforma-ia-back-50127e4cb1f5.herokuapp.com/api', // Você ajustará isso
-        GPT_MAKER_URL: 'https://plataforma-ia-back-50127e4cb1f5.herokuapp.com/api'
+        BASE_URL: 'https://api.trendgpt.com.br/api', // Você ajustará isso
+        GPT_MAKER_URL: 'https://api.trendgpt.com.br/api'
     }
 };
 
@@ -482,8 +482,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (unreadBadge) {
             unreadBadge.style.display = 'none';
         }
-        
-        updateChatHeader(chat);
     }
 
     // Função para ordenar chats por última mensagem
@@ -652,26 +650,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 day: '2-digit',
                 month: '2-digit'
             });
-        }
-    }
-
-    function updateChatHeader(chat) {
-        const headerName = document.querySelector('.chat-header-name');
-        const phoneNumber = document.querySelector('.phone-number');
-        
-        if (chat) {
-            headerName.textContent = chat.name || 'Chat';
-            if (chat.whatsappPhone) {
-                // Formata o número como +55 (61) 8187-0638
-                const phone = chat.whatsappPhone;
-                const formattedPhone = `+${phone.slice(0, 2)} (${phone.slice(2, 4)}) ${phone.slice(4, 9)}-${phone.slice(9)}`;
-                phoneNumber.textContent = formattedPhone;
-            } else {
-                phoneNumber.textContent = '';
-            }
-        } else {
-            headerName.textContent = 'Selecione um chat';
-            phoneNumber.textContent = '';
         }
     }
 
