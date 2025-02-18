@@ -152,6 +152,14 @@ body {
     gap: 12px;
 }
 
+.user-avatar {
+    width: 40px;  /* Ajuste conforme necessário */
+    height: 40px;
+    object-fit: cover; /* Mantém a proporção da imagem */
+    border-radius: 50%; /* Deixa a imagem circular (opcional) */
+}
+
+
 .user-info h2 {
     font-size: 18px;
     font-weight: 500;
