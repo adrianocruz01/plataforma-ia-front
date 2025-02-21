@@ -25,7 +25,7 @@
                     <button class="theme-toggle-button">
                         <span class="material-icons">dark_mode</span>
                     </button>
-                    <button class="logout-button" onclick="handleLogout(event)" title="Sair">
+                    <button class="logout-button" title="Sair">
                         <span class="material-icons">logout</span>
                     </button>
                     <span class="material-icons">more_vert</span>
@@ -86,24 +86,6 @@
         </div>
     </div>
     <script src="js/authController.js"></script>
-    <script>
-        // Inicializa autenticação global
-        window.auth = new AuthController();
-        
-        // Handler para logout com prevenção de evento padrão
-        function handleLogout(event) {
-            console.log('[UI] Logout button clicked');
-            if (event) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            window.auth.logout();
-            return false; // Previne qualquer comportamento padrão adicional
-        }
-
-        // Inicializa após definir o handler
-        window.auth.initialize();
-    </script>
     <script src="js/aiController.js"></script>
     <script src="script.js"></script>
 </body>

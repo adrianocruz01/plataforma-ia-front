@@ -1,48 +1,26 @@
 // Configuração do ambiente
 const API_CONFIG = {
+    // Em desenvolvimento
     development: {
         BASE_URL: 'http://localhost:3000/api',
         GPT_MAKER_URL: 'http://localhost:3000/api'
     },
+    // Em produção
     production: {
-        BASE_URL: 'https://api.trendgpt.com.br/api',
+        BASE_URL: 'https://api.trendgpt.com.br/api',  // URL correta do backend
         GPT_MAKER_URL: 'https://api.trendgpt.com.br/api'
     }
 };
 
 // Define o ambiente atual
-function getEnvironment() {
-    const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return 'development';
-    }
-    return 'production';
-}
-
-// Configuração atual
-const ENV = getEnvironment();
+const ENV = window.location.hostname === 'localhost' ? 'development' : 'production';
 const API_BASE_URL = API_CONFIG[ENV].BASE_URL;
 const GPT_MAKER_BASE_URL = API_CONFIG[ENV].GPT_MAKER_URL;
 
-console.log('[Config] Environment:', ENV);
-console.log('[Config] API URL:', API_BASE_URL);
-
 document.addEventListener('DOMContentLoaded', () => {
-    // Verifica se estamos na página de login
-    if (window.location.pathname.includes('login')) {
-        console.log('[Main] Login page detected, skipping chat initialization');
-        return;
-    }
-
     // Inicializa autenticação
     const auth = new AuthController();
     auth.initialize();
-
-    // Se não estiver autenticado, nem continua
-    if (!auth.isAuthenticated()) {
-        console.log('[Main] User not authenticated, redirecting to login');
-        return;
-    }
 
     // Elementos do DOM
     const chatList = document.querySelector('.chat-list');

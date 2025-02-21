@@ -131,6 +131,26 @@
             display: none;
         }
 
+        .loading {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .loading .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         @media (max-width: 480px) {
             .login-container {
                 padding: 30px 20px;
@@ -146,7 +166,7 @@
             <h1>Trend GPT</h1>
             <p>Entre para acessar a plataforma</p>
         </div>
-        <form class="login-form">
+        <form id="loginForm">
             <div class="form-group">
                 <label for="username">Usuário</label>
                 <input type="text" id="username" name="username" placeholder="Digite seu usuário" required>
@@ -156,8 +176,11 @@
                 <input type="password" id="password" name="password" placeholder="Digite sua senha" required>
             </div>
             <button type="submit">Entrar</button>
-            <div class="error-message"></div>
-            <div class="success-message"></div>
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
         </form>
     </div>
 
@@ -172,62 +195,47 @@
             }
         };
 
-        // Define o ambiente atual
-        function getEnvironment() {
-            const hostname = window.location.hostname;
-            if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                return 'development';
-            }
-            return 'production';
-        }
-
-        // Configuração atual
-        const ENV = getEnvironment();
+        const ENV = window.location.hostname === 'localhost' ? 'development' : 'production';
         const API_BASE_URL = API_CONFIG[ENV].BASE_URL;
-
-        console.log('[Login] Environment:', ENV);
-        console.log('[Login] API URL:', API_BASE_URL);
     </script>
     <script src="js/authController.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => { 
-            console.log('[Login] Page loaded');
-            
-            const loginForm = document.querySelector('.login-form');
-            const errorMessage = document.querySelector('.error-message');
-            const successMessage = document.querySelector('.success-message');
-
-            // Inicializa autenticação
             const auth = new AuthController();
-            auth.initialize();
+            const form = document.getElementById('loginForm');
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            const loading = document.querySelector('.loading');
 
             // Se já estiver autenticado, redireciona
             if (auth.isAuthenticated()) {
-                console.log('[Login] User already authenticated, redirecting to home');
-                window.location.replace('/');
+                window.location.href = '/';
                 return;
             }
 
-            loginForm.addEventListener('submit', async (e) => {
+            form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                console.log('[Login] Form submitted');
                 
-                const username = document.querySelector('#username').value;
-                const password = document.querySelector('#password').value;
-
+                // Reset messages
                 errorMessage.style.display = 'none';
                 successMessage.style.display = 'none';
+                loading.style.display = 'flex';
+
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
 
                 try {
-                    console.log('[Login] Attempting login...');
                     await auth.login(username, password);
-                    console.log('[Login] Login successful');
                     successMessage.textContent = 'Login realizado com sucesso!';
                     successMessage.style.display = 'block';
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
                 } catch (error) {
-                    console.error('[Login] Login failed:', error);
                     errorMessage.textContent = error.message || 'Erro ao fazer login';
                     errorMessage.style.display = 'block';
+                } finally {
+                    loading.style.display = 'none';
                 }
             });
         });
