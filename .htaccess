@@ -4,6 +4,9 @@ RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
+# Não redirecionar login.html
+RewriteCond %{REQUEST_URI} !^/login.html$
+
 # Redirecionar todas as outras requisições para o index.html
 RewriteRule ^(.*)$ index.html [L]
 

@@ -1,13 +1,11 @@
 // Configuração do ambiente
 const API_CONFIG = {
-    // Em desenvolvimento
     development: {
         BASE_URL: 'http://localhost:3000/api',
         GPT_MAKER_URL: 'http://localhost:3000/api'
     },
-    // Em produção
     production: {
-        BASE_URL: 'https://api.trendgpt.com.br/api',  // URL correta do backend
+        BASE_URL: 'https://api.trendgpt.com.br/api',
         GPT_MAKER_URL: 'https://api.trendgpt.com.br/api'
     }
 };
@@ -21,6 +19,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inicializa autenticação
     const auth = new AuthController();
     auth.initialize();
+
+    // Verifica se está na página de login
+    const isLoginPage = window.location.pathname.includes('login.html');
+    if (!auth.isAuthenticated() && !isLoginPage) {
+        window.location.replace('/login.html');
+        return;
+    }
 
     // Elementos do DOM
     const chatList = document.querySelector('.chat-list');
