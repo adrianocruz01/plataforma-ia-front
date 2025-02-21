@@ -5,5 +5,8 @@
   "scripts": {
     "dev": "serve -s . -l 5500",
     "start": "serve -s . -l $PORT"
+  },
+  "dependencies": {
+    "serve": "^14.2.1"
   }
 }
