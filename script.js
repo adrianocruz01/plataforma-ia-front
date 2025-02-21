@@ -11,9 +11,21 @@ const API_CONFIG = {
 };
 
 // Define o ambiente atual
-const ENV = window.location.hostname === 'localhost' ? 'development' : 'production';
+function getEnvironment() {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'development';
+    }
+    return 'production';
+}
+
+// Configuração atual
+const ENV = getEnvironment();
 const API_BASE_URL = API_CONFIG[ENV].BASE_URL;
 const GPT_MAKER_BASE_URL = API_CONFIG[ENV].GPT_MAKER_URL;
+
+console.log('[Config] Environment:', ENV);
+console.log('[Config] API URL:', API_BASE_URL);
 
 document.addEventListener('DOMContentLoaded', () => {
     // Verifica se estamos na página de login

@@ -10,6 +10,12 @@ class AuthController {
     // Inicializa o controlador
     initialize() {
         console.log('[Auth] Initializing...');
+        this._restoreSession();
+        this._setupAuthRedirects();
+    }
+
+    // Restaura a sessão do localStorage
+    _restoreSession() {
         const savedSession = localStorage.getItem('auth_session');
         if (savedSession) {
             try {
@@ -20,22 +26,19 @@ class AuthController {
                 this._notifyStateChange();
             } catch (error) {
                 console.error('[Auth] Error restoring session:', error);
-                this.logout();
+                this._clearSession();
             }
         } else {
             console.log('[Auth] No saved session found');
         }
-
-        // Verifica autenticação e redireciona se necessário
-        this.checkAuthAndRedirect();
     }
 
-    // Verifica autenticação e redireciona
-    checkAuthAndRedirect() {
+    // Configura redirecionamentos baseados em autenticação
+    _setupAuthRedirects() {
         const currentPath = window.location.pathname;
         const isLoginPage = currentPath.endsWith('login.html') || currentPath.endsWith('login');
         
-        console.log('[Auth] Checking auth state:', {
+        console.log('[Auth] Setting up redirects:', {
             path: currentPath,
             isLoginPage,
             isAuthenticated: this.isAuthenticated()
@@ -44,14 +47,33 @@ class AuthController {
         if (this.isAuthenticated()) {
             if (isLoginPage) {
                 console.log('[Auth] Redirecting authenticated user to home');
-                window.location.replace('/');
+                this._redirect('/');
             }
         } else {
             if (!isLoginPage) {
                 console.log('[Auth] Redirecting unauthenticated user to login');
-                window.location.replace('/login.html');
+                this._redirect('/login.html');
             }
         }
+    }
+
+    // Função segura para redirecionamento
+    _redirect(path) {
+        try {
+            window.location.replace(path);
+        } catch (error) {
+            console.error('[Auth] Error during redirect:', error);
+            window.location.href = path;
+        }
+    }
+
+    // Limpa a sessão
+    _clearSession() {
+        console.log('[Auth] Clearing session');
+        this.currentUser = null;
+        this.token = null;
+        localStorage.removeItem('auth_session');
+        this._notifyStateChange();
     }
 
     // Login do usuário
@@ -66,12 +88,13 @@ class AuthController {
                 body: JSON.stringify({ username, password })
             });
 
-            const data = await response.json();
             if (!response.ok) {
+                const data = await response.json();
                 console.error('[Auth] Login failed:', data.message);
                 throw new Error(data.message || 'Credenciais inválidas');
             }
-            
+
+            const data = await response.json();
             this.currentUser = {
                 id: data.user.id,
                 username: data.user.username,
@@ -87,7 +110,7 @@ class AuthController {
 
             console.log('[Auth] Login successful:', { username: this.currentUser.username });
             this._notifyStateChange();
-            window.location.replace('/');
+            this._redirect('/');
             return true;
         } catch (error) {
             console.error('[Auth] Login error:', error);
@@ -99,15 +122,12 @@ class AuthController {
     logout() {
         console.log('[Auth] Logging out...');
         try {
-            this.currentUser = null;
-            this.token = null;
-            localStorage.removeItem('auth_session');
-            this._notifyStateChange();
+            this._clearSession();
             console.log('[Auth] Session cleared, redirecting to login');
-            window.location.replace('/login.html');
+            this._redirect('/login.html');
         } catch (error) {
             console.error('[Auth] Error during logout:', error);
-            // Tenta forçar o redirecionamento mesmo com erro
+            // Força o redirecionamento mesmo com erro
             window.location.href = '/login.html';
         }
     }
@@ -126,11 +146,6 @@ class AuthController {
     // Verifica se o usuário é admin
     isAdmin() {
         return this.currentUser?.role === 'admin';
-    }
-
-    // Verifica se o usuário é atendente
-    isAttendant() {
-        return this.currentUser?.role === 'attendant';
     }
 
     // Obtém o assistantId do usuário
