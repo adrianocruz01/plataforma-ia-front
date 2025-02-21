@@ -2,6 +2,14 @@
   "root": ".",
   "clean_urls": true,
   "routes": {
+    "/login": "login.html",
     "/**": "index.html"
+  },
+  "https_only": true,
+  "headers": {
+    "/**": {
+      "Cache-Control": "no-store, no-cache",
+      "Access-Control-Allow-Origin": "*"
+    }
   }
 }
