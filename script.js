@@ -7,7 +7,7 @@ const API_CONFIG = {
     },
     // Em produção
     production: {
-        BASE_URL: window.location.origin + '/api',  // Usa o mesmo domínio do frontend
+        BASE_URL: window.location.origin + '/api',
         GPT_MAKER_URL: window.location.origin + '/api'
     }
 };
@@ -21,18 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inicializa autenticação
     const auth = new AuthController();
     auth.initialize();
-
-    // Verifica autenticação e redireciona com prevenção de loop
-    const isLoginPage = window.location.pathname.includes('login.html');
-    if (!auth.isAuthenticated() && !isLoginPage) {
-        console.log('User not authenticated, redirecting to login');
-        window.location.href = '/login.html';
-        return;
-    } else if (auth.isAuthenticated() && isLoginPage) {
-        console.log('User already authenticated, redirecting to main page');
-        window.location.href = '/';
-        return;
-    }
 
     // Elementos do DOM
     const chatList = document.querySelector('.chat-list');
