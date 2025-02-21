@@ -4,10 +4,12 @@ class AuthController {
         this.currentUser = null;
         this.token = null;
         this.onAuthStateChange = null;
+        console.log('AuthController initialized');
     }
 
     // Inicializa o controlador
     initialize() {
+        console.log('Initializing auth controller...');
         // Tenta recuperar a sessão salva
         const savedSession = localStorage.getItem('auth_session');
         if (savedSession) {
@@ -15,37 +17,45 @@ class AuthController {
                 const session = JSON.parse(savedSession);
                 this.currentUser = session.user;
                 this.token = session.token;
+                console.log('Session restored successfully', { user: this.currentUser });
                 this._notifyStateChange();
             } catch (error) {
                 console.error('Erro ao recuperar sessão:', error);
                 this.logout();
             }
+        } else {
+            console.log('No saved session found');
         }
     }
 
     // Login do usuário
     async login(username, password) {
+        console.log('Attempting login...');
         try {
             const response = await fetch(`${API_BASE_URL}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username, password }),
+                credentials: 'include' // Importante para cookies
             });
 
             if (!response.ok) {
-                throw new Error('Credenciais inválidas');
+                const errorData = await response.json();
+                console.error('Login failed:', errorData);
+                throw new Error(errorData.message || 'Credenciais inválidas');
             }
 
             const data = await response.json();
+            console.log('Login successful', { user: data.user });
             
             // Salva os dados do usuário e token
             this.currentUser = {
                 id: data.user.id,
                 username: data.user.username,
-                role: data.user.role, // 'admin' ou 'attendant'
-                assistantId: data.user.assistantId // ID do assistente associado (para atendentes)
+                role: data.user.role,
+                assistantId: data.user.assistantId
             };
             this.token = data.token;
 
@@ -65,6 +75,7 @@ class AuthController {
 
     // Logout do usuário
     logout() {
+        console.log('Logging out...');
         this.currentUser = null;
         this.token = null;
         localStorage.removeItem('auth_session');
@@ -73,7 +84,9 @@ class AuthController {
 
     // Verifica se o usuário está autenticado
     isAuthenticated() {
-        return !!this.currentUser && !!this.token;
+        const isAuth = !!this.currentUser && !!this.token;
+        console.log('Checking authentication:', isAuth);
+        return isAuth;
     }
 
     // Verifica se o usuário é admin
@@ -99,10 +112,7 @@ class AuthController {
     // Notifica mudanças de estado
     _notifyStateChange() {
         if (this.onAuthStateChange) {
-            this.onAuthStateChange({
-                isAuthenticated: this.isAuthenticated(),
-                user: this.currentUser
-            });
+            this.onAuthStateChange(this.isAuthenticated());
         }
     }
 }

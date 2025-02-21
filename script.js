@@ -7,8 +7,8 @@ const API_CONFIG = {
     },
     // Em produção
     production: {
-        BASE_URL: 'https://api.trendgpt.com.br/api',
-        GPT_MAKER_URL: 'https://api.trendgpt.com.br/api'
+        BASE_URL: window.location.origin + '/api',  // Usa o mesmo domínio do frontend
+        GPT_MAKER_URL: window.location.origin + '/api'
     }
 };
 
@@ -22,9 +22,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = new AuthController();
     auth.initialize();
 
-    // Verifica autenticação
-    if (!auth.isAuthenticated()) {
+    // Verifica autenticação e redireciona com prevenção de loop
+    const isLoginPage = window.location.pathname.includes('login.html');
+    if (!auth.isAuthenticated() && !isLoginPage) {
+        console.log('User not authenticated, redirecting to login');
         window.location.href = '/login.html';
+        return;
+    } else if (auth.isAuthenticated() && isLoginPage) {
+        console.log('User already authenticated, redirecting to main page');
+        window.location.href = '/';
         return;
     }
 
