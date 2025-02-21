@@ -20,6 +20,25 @@ class AuthController {
                 this.logout();
             }
         }
+
+        // Verifica autenticação e redireciona se necessário
+        this.checkAuthAndRedirect();
+    }
+
+    // Verifica autenticação e redireciona
+    checkAuthAndRedirect() {
+        const currentPath = window.location.pathname;
+        const isLoginPage = currentPath.endsWith('login.html') || currentPath.endsWith('login');
+        
+        if (this.isAuthenticated()) {
+            if (isLoginPage) {
+                window.location.replace('/');
+            }
+        } else {
+            if (!isLoginPage) {
+                window.location.replace('/login.html');
+            }
+        }
     }
 
     // Login do usuário
@@ -52,6 +71,7 @@ class AuthController {
             }));
 
             this._notifyStateChange();
+            window.location.replace('/');
             return true;
         } catch (error) {
             console.error('Erro no login:', error);
@@ -65,6 +85,7 @@ class AuthController {
         this.token = null;
         localStorage.removeItem('auth_session');
         this._notifyStateChange();
+        window.location.replace('/login.html');
     }
 
     // Verifica se o usuário está autenticado
@@ -82,7 +103,7 @@ class AuthController {
         return this.currentUser?.role === 'attendant';
     }
 
-    // Retorna o ID do assistente associado ao atendente
+    // Obtém o assistantId do usuário
     getAssistantId() {
         return this.currentUser?.assistantId;
     }
