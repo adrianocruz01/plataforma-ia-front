@@ -89,14 +89,19 @@
     <script>
         // Inicializa autenticação global
         window.auth = new AuthController();
-        window.auth.initialize();
-
+        
         // Handler para logout com prevenção de evento padrão
         function handleLogout(event) {
-            event.preventDefault();
+            if (event) {
+                event.preventDefault();
+            }
             console.log('[UI] Logout button clicked');
             window.auth.logout();
+            return false; // Previne qualquer comportamento padrão adicional
         }
+
+        // Inicializa após definir o handler
+        window.auth.initialize();
     </script>
     <script src="js/aiController.js"></script>
     <script src="script.js"></script>
