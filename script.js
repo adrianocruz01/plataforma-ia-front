@@ -1,11 +1,13 @@
 // Configuração do ambiente
 const API_CONFIG = {
+    // Em desenvolvimento
     development: {
         BASE_URL: 'http://localhost:3000/api',
         GPT_MAKER_URL: 'http://localhost:3000/api'
     },
+    // Em produção
     production: {
-        BASE_URL: 'https://api.trendgpt.com.br/api',
+        BASE_URL: 'https://api.trendgpt.com.br/api',  // URL correta do backend
         GPT_MAKER_URL: 'https://api.trendgpt.com.br/api'
     }
 };
