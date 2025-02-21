@@ -7,7 +7,7 @@ const API_CONFIG = {
     },
     // Em produção
     production: {
-        BASE_URL: 'https://api.trendgpt.com.br/api', // Você ajustará isso
+        BASE_URL: 'https://api.trendgpt.com.br/api',
         GPT_MAKER_URL: 'https://api.trendgpt.com.br/api'
     }
 };
@@ -18,6 +18,16 @@ const API_BASE_URL = API_CONFIG[ENV].BASE_URL;
 const GPT_MAKER_BASE_URL = API_CONFIG[ENV].GPT_MAKER_URL;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Inicializa autenticação
+    const auth = new AuthController();
+    auth.initialize();
+
+    // Verifica autenticação
+    if (!auth.isAuthenticated()) {
+        window.location.href = '/login.html';
+        return;
+    }
+
     // Elementos do DOM
     const chatList = document.querySelector('.chat-list');
     const messageArea = document.querySelector('.chat-messages');
@@ -90,12 +100,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async uploadImage(imageFile) {
-            // console.log('Arquivo a ser enviado:', imageFile);
-            
             const formData = new FormData();
             formData.append('file', imageFile, imageFile.name);
-            
-            // console.log('FormData criado:', formData);
             
             const response = await fetch(`${API_BASE_URL}/upload-image`, {
                 method: 'POST',
@@ -124,11 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async sendMessage(chatId, message) {
-            // console.log('Enviando mensagem para chat:', chatId);
-            // console.log('Conteúdo da mensagem:', message);
-            
-            // Se for string (texto), envia como { message }
-            // Se for objeto (áudio/imagem), envia direto
             const body = typeof message === 'string' 
                 ? { message } 
                 : message;
@@ -284,7 +285,8 @@ document.addEventListener('DOMContentLoaded', () => {
         mediaRecorder: null,
         audioChunks: [],
         aiController: null,
-        theme: localStorage.getItem('theme') || 'dark'
+        theme: localStorage.getItem('theme') || 'dark',
+        selectedAgent: 'all'
     };
 
     const api = new GPTMakerAPI();
@@ -319,7 +321,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Upload da imagem para o Cloudinary
             const imageUrl = await api.uploadImage(file);
-            // console.log('URL da imagem após upload:', imageUrl);
             
             // Envia a URL da imagem
             const messageData = {
@@ -508,7 +509,6 @@ document.addEventListener('DOMContentLoaded', () => {
         state.chatPollingInterval = setInterval(async () => {
             try {
                 const response = await api.getChats();
-                // console.log('Resposta dos chats:', response);
                 
                 // Se a resposta tem a propriedade 'chats', usa ela
                 const chats = response.chats || response;
@@ -568,11 +568,22 @@ document.addEventListener('DOMContentLoaded', () => {
         renderChatList(filteredChats);
     }
 
+    // Função para filtrar chats por agente
+    function filterChatsByAgent(chats, selectedAgent) {
+        if (selectedAgent === 'all') {
+            return chats;
+        }
+        return chats.filter(chat => chat.agentName === selectedAgent);
+    }
+
     async function renderChatList(chats) {
         const chatList = document.querySelector('.chat-list');
         chatList.innerHTML = '';
 
-        chats.forEach(chat => {
+        // Filtra os chats pelo agente selecionado
+        const filteredChats = filterChatsByAgent(chats, state.selectedAgent);
+
+        filteredChats.forEach(chat => {
             const chatItem = document.createElement('div');
             chatItem.className = 'chat-item';
             if (chat.id === state.currentChatId) {
@@ -614,7 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="chat-item-time">${timeStr}</div>
                     </div>
                     <div class="chat-item-last-message">
-                        <span class="material-icons">${chat.read ? 'done_all' : 'done'}</span>
+                        <div class="chat-assistant-name">${chat.agentName}:</div>
                         ${lastMessage}
                     </div>
                 </div>
@@ -657,7 +668,6 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             notifications.info('Carregando chats...');
             const response = await api.getChats();
-            // console.log('Resposta dos chats:', response);
             
             // Se a resposta tem a propriedade 'chats', usa ela
             const chats = response.chats || response;
@@ -668,8 +678,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             state.allChats = sortChatsByLastMessage(chats);
+            
+            // Popula o select de agentes
+            populateAgentSelect(state.allChats);
+            
+            // Renderiza a lista de chats
             renderChatList(state.allChats);
-            startChatPolling(); // Inicia o polling dos chats
+            
+            startChatPolling();
             notifications.success('Chats carregados com sucesso!');
         } catch (error) {
             console.error('Erro ao carregar chats:', error);
@@ -775,6 +791,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Função para popular o select de agentes
+    function populateAgentSelect(chats) {
+        const agentFilter = document.getElementById('agent-filter');
+        const agents = new Set();
+        
+        // Coleta todos os agentes únicos
+        chats.forEach(chat => {
+            if (chat.agentName) {
+                agents.add(chat.agentName);
+            }
+        });
+
+        // Limpa opções antigas, mantendo a opção "Todos agentes"
+        agentFilter.innerHTML = '<option value="all">Todos agentes</option>';
+
+        // Adiciona uma opção para cada agente
+        agents.forEach(agent => {
+            const option = document.createElement('option');
+            option.value = agent;
+            option.textContent = agent;
+            agentFilter.appendChild(option);
+        });
+    }
+
     // Event Listeners
     inputArea.addEventListener('submit', sendMessage);
     messageInput.addEventListener('keypress', (e) => {
@@ -802,11 +842,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const selectedChat = document.querySelector('.chat-item.active');
                 if (selectedChat) {
                     const chatId = selectedChat.dataset.id;
-                    // console.log('Enviando áudio para chat:', chatId);
                     
                     // Primeiro faz upload para o Cloudinary
                     const audioUrl = await api.uploadAudio(audioBlob);
-                    // console.log('URL do áudio após upload:', audioUrl);
                     
                     // Envia apenas a URL do áudio
                     const messageData = {
@@ -823,6 +861,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 notifications.error('Erro ao enviar áudio');
             }
         }
+    });
+
+    // Logout
+    const logoutButton = document.querySelector('.logout-button');
+    logoutButton.addEventListener('click', () => {
+        auth.logout();
+        window.location.href = '/login.html';
     });
 
     // Função para alternar o tema
@@ -842,6 +887,13 @@ document.addEventListener('DOMContentLoaded', () => {
     themeIcon.textContent = state.theme === 'dark' ? 'dark_mode' : 'light_mode';
 
     document.querySelector('.theme-toggle-button').addEventListener('click', toggleTheme);
+
+    // Adiciona listener para o select de agentes
+    const agentFilter = document.getElementById('agent-filter');
+    agentFilter.addEventListener('change', (e) => {
+        state.selectedAgent = e.target.value;
+        renderChatList(state.allChats);
+    });
 
     loadChats();
     initializeSearch();

@@ -146,6 +146,28 @@ body {
     background-color: var(--color-hover);
 }
 
+.header-icons button {
+    background: none;
+    border: none;
+    color: var(--color-white);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.header-icons button:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.logout-button {
+    color: var(--color-white);
+}
+
+.logout-button:hover {
+    color: #ff4444;
+}
+
 .user-info {
     display: flex;
     align-items: center;
@@ -768,4 +790,41 @@ body {
 
 :root[data-theme="light"] .chat-item-time {
     color: black;
+}
+
+.chat-assistant-name {
+    color: #666;
+    font-size: 14px;
+    margin-right: 5px;
+    display: inline;
+}
+
+[data-theme="dark"] .chat-assistant-name {
+    color: #aaa;
+}
+
+.agent-filter {
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: white;
+    color: #333;
+    font-size: 14px;
+    margin-right: 10px;
+    cursor: pointer;
+    outline: none;
+}
+
+.agent-filter:hover {
+    border-color: #007bff;
+}
+
+[data-theme="dark"] .agent-filter {
+    background-color: #2c2c2c;
+    border-color: #404040;
+    color: #fff;
+}
+
+[data-theme="dark"] .agent-filter:hover {
+    border-color: #007bff;
 }
