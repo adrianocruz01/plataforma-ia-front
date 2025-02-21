@@ -198,7 +198,7 @@
         const ENV = window.location.hostname === 'localhost' ? 'development' : 'production';
         const API_BASE_URL = API_CONFIG[ENV].BASE_URL;
     </script>
-    <script src="js/authController.js"></script>
+    <script src="./js/authController.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => { 
             const auth = new AuthController();
@@ -209,7 +209,7 @@
 
             // Se já estiver autenticado, redireciona
             if (auth.isAuthenticated()) {
-                window.location.href = '/chat.html';
+                window.location.href = './chat.html';
                 return;
             }
 
@@ -229,7 +229,7 @@
                     successMessage.textContent = 'Login realizado com sucesso!';
                     successMessage.style.display = 'block';
                     setTimeout(() => {
-                        window.location.href = '/chat.html';
+                        window.location.href = './chat.html';
                     }, 1000);
                 } catch (error) {
                     errorMessage.textContent = error.message || 'Erro ao fazer login';
