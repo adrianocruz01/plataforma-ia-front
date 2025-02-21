@@ -92,10 +92,11 @@
         
         // Handler para logout com prevenção de evento padrão
         function handleLogout(event) {
+            console.log('[UI] Logout button clicked');
             if (event) {
                 event.preventDefault();
+                event.stopPropagation();
             }
-            console.log('[UI] Logout button clicked');
             window.auth.logout();
             return false; // Previne qualquer comportamento padrão adicional
         }

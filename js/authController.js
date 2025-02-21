@@ -60,6 +60,7 @@ class AuthController {
     // Função segura para redirecionamento
     _redirect(path) {
         try {
+            console.log('[Auth] Redirecting to:', path);
             window.location.replace(path);
         } catch (error) {
             console.error('[Auth] Error during redirect:', error);
@@ -88,13 +89,14 @@ class AuthController {
                 body: JSON.stringify({ username, password })
             });
 
+            const data = await response.json();
+            console.log('[Auth] Login response:', data);
+
             if (!response.ok) {
-                const data = await response.json();
                 console.error('[Auth] Login failed:', data.message);
                 throw new Error(data.message || 'Credenciais inválidas');
             }
 
-            const data = await response.json();
             this.currentUser = {
                 id: data.user.id,
                 username: data.user.username,

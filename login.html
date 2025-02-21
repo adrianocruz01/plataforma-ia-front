@@ -172,12 +172,27 @@
             }
         };
 
-        const ENV = window.location.hostname === 'localhost' ? 'development' : 'production';
+        // Define o ambiente atual
+        function getEnvironment() {
+            const hostname = window.location.hostname;
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return 'development';
+            }
+            return 'production';
+        }
+
+        // Configuração atual
+        const ENV = getEnvironment();
         const API_BASE_URL = API_CONFIG[ENV].BASE_URL;
+
+        console.log('[Login] Environment:', ENV);
+        console.log('[Login] API URL:', API_BASE_URL);
     </script>
     <script src="js/authController.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => { 
+            console.log('[Login] Page loaded');
+            
             const loginForm = document.querySelector('.login-form');
             const errorMessage = document.querySelector('.error-message');
             const successMessage = document.querySelector('.success-message');
@@ -188,12 +203,14 @@
 
             // Se já estiver autenticado, redireciona
             if (auth.isAuthenticated()) {
+                console.log('[Login] User already authenticated, redirecting to home');
                 window.location.replace('/');
                 return;
             }
 
             loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                console.log('[Login] Form submitted');
                 
                 const username = document.querySelector('#username').value;
                 const password = document.querySelector('#password').value;
@@ -202,10 +219,13 @@
                 successMessage.style.display = 'none';
 
                 try {
+                    console.log('[Login] Attempting login...');
                     await auth.login(username, password);
+                    console.log('[Login] Login successful');
                     successMessage.textContent = 'Login realizado com sucesso!';
                     successMessage.style.display = 'block';
                 } catch (error) {
+                    console.error('[Login] Login failed:', error);
                     errorMessage.textContent = error.message || 'Erro ao fazer login';
                     errorMessage.style.display = 'block';
                 }
