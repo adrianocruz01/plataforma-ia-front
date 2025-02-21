@@ -7,8 +7,8 @@ const API_CONFIG = {
     },
     // Em produção
     production: {
-        BASE_URL: '/api',  // Usar caminho relativo para proxy
-        GPT_MAKER_URL: '/api'
+        BASE_URL: 'https://api.trendgpt.com.br/api',  // URL correta do backend
+        GPT_MAKER_URL: 'https://api.trendgpt.com.br/api'
     }
 };
 
@@ -66,12 +66,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
 
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Erro na requisição');
+                const text = await response.text();
+                console.log('Resposta recebida:', text);
+
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.error('Erro ao fazer parse da resposta:', e);
+                    throw new Error('Resposta inválida do servidor');
                 }
 
-                return response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Erro na requisição');
+                }
+
+                return data;
             } catch (error) {
                 console.error('Erro na requisição:', error);
                 throw error;
