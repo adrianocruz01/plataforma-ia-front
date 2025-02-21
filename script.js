@@ -20,13 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = new AuthController();
     auth.initialize();
 
-    // Verifica se está na página de login
-    const isLoginPage = window.location.pathname.includes('login.html');
-    if (!auth.isAuthenticated() && !isLoginPage) {
-        window.location.replace('/login.html');
-        return;
-    }
-
     // Elementos do DOM
     const chatList = document.querySelector('.chat-list');
     const messageArea = document.querySelector('.chat-messages');

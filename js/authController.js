@@ -8,18 +8,21 @@ class AuthController {
 
     // Inicializa o controlador
     initialize() {
-        const savedSession = localStorage.getItem('auth_session');
-        if (savedSession) {
+        const session = localStorage.getItem('auth_session');
+        if (session) {
             try {
-                const session = JSON.parse(savedSession);
-                this.currentUser = session.user;
-                this.token = session.token;
+                const { user, token } = JSON.parse(session);
+                this.currentUser = user;
+                this.token = token;
                 this._notifyStateChange();
             } catch (error) {
-                console.error('Erro ao recuperar sessão:', error);
+                console.error('Erro ao restaurar sessão:', error);
                 this.logout();
             }
         }
+        
+        // Verifica se precisa redirecionar
+        this._handleAuthRedirect();
     }
 
     // Login do usuário
@@ -65,6 +68,7 @@ class AuthController {
         this.token = null;
         localStorage.removeItem('auth_session');
         this._notifyStateChange();
+        window.location.href = '/login.html';
     }
 
     // Verifica se o usuário está autenticado
@@ -87,15 +91,40 @@ class AuthController {
         return this.currentUser?.assistantId;
     }
 
-    // Registra callback para mudanças de estado
-    onStateChange(callback) {
+    // Obtém o token atual
+    getToken() {
+        return this.token;
+    }
+
+    // Obtém o usuário atual
+    getCurrentUser() {
+        return this.currentUser;
+    }
+
+    // Registra callback para mudança de estado
+    onAuthStateChanged(callback) {
         this.onAuthStateChange = callback;
     }
 
-    // Notifica mudanças de estado
+    // Notifica mudança de estado
     _notifyStateChange() {
         if (this.onAuthStateChange) {
             this.onAuthStateChange(this.isAuthenticated());
+        }
+    }
+
+    // Lida com redirecionamentos de autenticação
+    _handleAuthRedirect() {
+        const isLoginPage = window.location.pathname.includes('login.html');
+        
+        if (this.isAuthenticated()) {
+            if (isLoginPage) {
+                window.location.href = '/';
+            }
+        } else {
+            if (!isLoginPage) {
+                window.location.href = '/login.html';
+            }
         }
     }
 }
