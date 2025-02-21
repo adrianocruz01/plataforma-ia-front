@@ -7,8 +7,8 @@ const API_CONFIG = {
     },
     // Em produção
     production: {
-        BASE_URL: window.location.origin + '/api',
-        GPT_MAKER_URL: window.location.origin + '/api'
+        BASE_URL: 'https://api.trendgpt.com.br/api',  // URL correta do backend
+        GPT_MAKER_URL: 'https://api.trendgpt.com.br/api'
     }
 };
 
@@ -55,21 +55,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async request(endpoint, options = {}) {
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-                ...options,
-                headers: {
-                    ...options.headers,
-                    'Authorization': `Bearer ${this.token}`,
-                    'Content-Type': 'application/json'
+            try {
+                console.log('Fazendo requisição para:', `${API_BASE_URL}${endpoint}`);
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    ...options,
+                    headers: {
+                        ...options.headers,
+                        'Authorization': `Bearer ${this.token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const text = await response.text();
+                console.log('Resposta recebida:', text);
+
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.error('Erro ao fazer parse da resposta:', e);
+                    throw new Error('Resposta inválida do servidor');
                 }
-            });
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Erro na requisição');
+                if (!response.ok) {
+                    throw new Error(data.error || 'Erro na requisição');
+                }
+
+                return data;
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                throw error;
             }
-
-            return response.json();
         }
 
         async uploadAudio(audioBlob) {
@@ -116,7 +132,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async getChats() {
-            return this.request('/chats');
+            try {
+                console.log('Buscando chats...');
+                const response = await this.request('/chats');
+                console.log('Chats recebidos:', response);
+                return response;
+            } catch (error) {
+                console.error('Erro ao buscar chats:', error);
+                throw error;
+            }
         }
 
         async getChatMessages(chatId) {
@@ -661,17 +685,28 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadChats() {
         try {
             notifications.info('Carregando chats...');
+            console.log('Iniciando carregamento de chats...');
+            
             const response = await api.getChats();
+            console.log('Resposta completa:', response);
             
-            // Se a resposta tem a propriedade 'chats', usa ela
-            const chats = response.chats || response;
+            // Tenta extrair os chats da resposta
+            let chats = response;
+            if (response && typeof response === 'object') {
+                // Se a resposta tem a propriedade 'chats' ou 'data', usa ela
+                chats = response.chats || response.data || response;
+            }
             
+            // Verifica se chats é um array
             if (!Array.isArray(chats)) {
                 console.error('Resposta não é um array:', chats);
+                notifications.error('Formato de resposta inválido');
                 return;
             }
 
+            console.log('Chats antes de ordenar:', chats);
             state.allChats = sortChatsByLastMessage(chats);
+            console.log('Chats depois de ordenar:', state.allChats);
             
             // Popula o select de agentes
             populateAgentSelect(state.allChats);
@@ -683,7 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
             notifications.success('Chats carregados com sucesso!');
         } catch (error) {
             console.error('Erro ao carregar chats:', error);
-            notifications.error('Erro ao carregar chats. Por favor, tente novamente.');
+            notifications.error('Erro ao carregar chats: ' + error.message);
         }
     }
 
