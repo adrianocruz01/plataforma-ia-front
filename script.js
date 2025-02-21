@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async request(endpoint, options = {}) {
             try {
-                console.log('Fazendo requisição para:', `${API_BASE_URL}${endpoint}`);
+                // console.log('Fazendo requisição para:', `${API_BASE_URL}${endpoint}`);
                 const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                     ...options,
                     headers: {
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 const text = await response.text();
-                console.log('Resposta recebida:', text);
+                // console.log('Resposta recebida:', text);
 
                 let data;
                 try {
@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 console.log('Buscando chats...');
                 const response = await this.request('/chats');
-                console.log('Chats recebidos:', response);
+                // console.log('Chats recebidos:', response);
                 return response;
             } catch (error) {
                 console.error('Erro ao buscar chats:', error);
@@ -688,7 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Iniciando carregamento de chats...');
             
             const response = await api.getChats();
-            console.log('Resposta completa:', response);
+            // console.log('Resposta completa:', response);
             
             // Tenta extrair os chats da resposta
             let chats = response;
@@ -704,9 +704,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            console.log('Chats antes de ordenar:', chats);
+            // console.log('Chats antes de ordenar:', chats);
             state.allChats = sortChatsByLastMessage(chats);
-            console.log('Chats depois de ordenar:', state.allChats);
+            // console.log('Chats depois de ordenar:', state.allChats);
             
             // Popula o select de agentes
             populateAgentSelect(state.allChats);
