@@ -1,15 +1,5 @@
 {
   "root": ".",
   "clean_urls": true,
-  "routes": {
-    "/js/*": "/js/",
-    "/css/*": "/css/",
-    "/**": "index.html"
-  },
-  "https_only": true,
-  "headers": {
-    "/**": {
-      "Cache-Control": "no-store, no-cache"
-    }
-  }
+  "https_only": true
 }
