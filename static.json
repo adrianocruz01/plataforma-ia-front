@@ -1,21 +1,10 @@
 {
   "root": ".",
-  "clean_urls": false,
+  "clean_urls": true,
   "routes": {
-    "/": "login.html",
-    "/index.html": "index.html",
-    "/chat": "index.html",
-    "/chat/**": "index.html",
-    "/login": "login.html",
-    "/login.html": "login.html"
-  },
-  "https_only": true,
-  "headers": {
-    "/**": {
-      "Cache-Control": "no-store, no-cache, must-revalidate",
-      "Pragma": "no-cache",
-      "Expires": "0",
-      "Access-Control-Allow-Origin": "*"
+    "/**": "index.html"
+  }
+}
     }
   }
 }

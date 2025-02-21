@@ -1,42 +1,26 @@
 // Configuração do ambiente
 const API_CONFIG = {
+    // Em desenvolvimento
     development: {
         BASE_URL: 'http://localhost:3000/api',
         GPT_MAKER_URL: 'http://localhost:3000/api'
     },
+    // Em produção
     production: {
-        BASE_URL: 'https://api.trendgpt.com.br/api',
+        BASE_URL: 'https://api.trendgpt.com.br/api',  // URL correta do backend
         GPT_MAKER_URL: 'https://api.trendgpt.com.br/api'
     }
 };
 
+// Define o ambiente atual
 const ENV = window.location.hostname === 'localhost' ? 'development' : 'production';
 const API_BASE_URL = API_CONFIG[ENV].BASE_URL;
 const GPT_MAKER_BASE_URL = API_CONFIG[ENV].GPT_MAKER_URL;
 
-console.log('[Config] Environment:', ENV);
-console.log('[Config] API URL:', API_BASE_URL);
-
 document.addEventListener('DOMContentLoaded', () => {
-    // Verifica se é página de login
-    const isLoginPage = window.location.pathname === '/' || 
-                       window.location.pathname === '/login' || 
-                       window.location.pathname === '/login.html';
-
-    if (isLoginPage) {
-        console.log('[Main] Login page detected, skipping chat initialization');
-        return;
-    }
-
     // Inicializa autenticação
     const auth = new AuthController();
-
-    // Se não estiver autenticado, redireciona para login
-    if (!auth.isAuthenticated()) {
-        console.log('[Main] User not authenticated, redirecting to login');
-        window.location.replace('/');
-        return;
-    }
+    auth.initialize();
 
     // Elementos do DOM
     const chatList = document.querySelector('.chat-list');
@@ -912,31 +896,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const logoutButton = document.querySelector('.logout-button');
     logoutButton.addEventListener('click', () => {
         auth.logout();
+        window.location.href = '/login.html';
     });
-
-    // Tema
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    const themeIcon = document.querySelector('.theme-toggle-button .material-icons');
-    if (themeIcon) {
-        themeIcon.textContent = savedTheme === 'dark' ? 'dark_mode' : 'light_mode';
-    }
 
     // Função para alternar o tema
     function toggleTheme() {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
+        state.theme = state.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', state.theme);
+        localStorage.setItem('theme', state.theme);
         
         // Atualiza o ícone
         const themeIcon = document.querySelector('.theme-toggle-button .material-icons');
-        if (themeIcon) {
-            themeIcon.textContent = newTheme === 'dark' ? 'dark_mode' : 'light_mode';
-        }
+        themeIcon.textContent = state.theme === 'dark' ? 'dark_mode' : 'light_mode';
     }
 
     // Inicialização
+    document.documentElement.setAttribute('data-theme', state.theme);
+    const themeIcon = document.querySelector('.theme-toggle-button .material-icons');
+    themeIcon.textContent = state.theme === 'dark' ? 'dark_mode' : 'light_mode';
+
     document.querySelector('.theme-toggle-button').addEventListener('click', toggleTheme);
 
     // Adiciona listener para o select de agentes
