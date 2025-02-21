@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "Frontend for GPT Maker chat application",
   "scripts": {
-    "start": "serve -s . -l $PORT",
-    "dev": "serve -l 5500 .",
+    "start": "serve -s . -l $PORT --config serve.json",
+    "dev": "serve -l 5500 . --config serve.json",
     "build": "echo 'No build step needed'"
   },
   "dependencies": {

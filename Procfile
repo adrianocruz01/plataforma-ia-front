@@ -1,1 +1,1 @@
-web: npx serve -s . -l $PORT
+web: npx serve -s . -l $PORT --config serve.json
