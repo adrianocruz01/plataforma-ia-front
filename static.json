@@ -2,8 +2,9 @@
   "root": ".",
   "clean_urls": true,
   "routes": {
-    "/login": "login.html",
-    "/**": "index.html"
+    "/": "login.html",
+    "/chat": "index.html",
+    "/chat/**": "index.html"
   },
   "https_only": true,
   "headers": {

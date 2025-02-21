@@ -15,9 +15,34 @@ class AuthController {
                 this.currentUser = session.user;
                 this.token = session.token;
                 this._notifyStateChange();
+                this._setupAuthRedirects();
             } catch (error) {
                 console.error('Erro ao recuperar sessão:', error);
                 this.logout();
+            }
+        }
+    }
+
+    // Configura redirecionamentos baseados em autenticação
+    _setupAuthRedirects() {
+        const currentPath = window.location.pathname;
+        const isLoginPage = currentPath === '/' || currentPath === '/login' || currentPath === '/login.html';
+        
+        console.log('[Auth] Setting up redirects:', {
+            path: currentPath,
+            isLoginPage,
+            isAuthenticated: this.isAuthenticated()
+        });
+
+        if (this.isAuthenticated()) {
+            if (isLoginPage) {
+                console.log('[Auth] Redirecting authenticated user to chat');
+                this._redirect('/chat');
+            }
+        } else {
+            if (!isLoginPage) {
+                console.log('[Auth] Redirecting unauthenticated user to login');
+                this._redirect('/');
             }
         }
     }
@@ -52,6 +77,7 @@ class AuthController {
             }));
 
             this._notifyStateChange();
+            this._redirect('/chat');
             return true;
         } catch (error) {
             console.error('Erro no login:', error);
@@ -61,10 +87,16 @@ class AuthController {
 
     // Logout do usuário
     logout() {
-        this.currentUser = null;
-        this.token = null;
-        localStorage.removeItem('auth_session');
-        this._notifyStateChange();
+        console.log('[Auth] Logging out...');
+        try {
+            this._clearSession();
+            console.log('[Auth] Session cleared, redirecting to login');
+            this._redirect('/');
+        } catch (error) {
+            console.error('[Auth] Error during logout:', error);
+            // Força o redirecionamento mesmo com erro
+            window.location.href = '/';
+        }
     }
 
     // Verifica se o usuário está autenticado
@@ -97,6 +129,18 @@ class AuthController {
         if (this.onAuthStateChange) {
             this.onAuthStateChange(this.isAuthenticated());
         }
+    }
+
+    // Redireciona para uma URL
+    _redirect(url) {
+        window.location.href = url;
+    }
+
+    // Limpa a sessão
+    _clearSession() {
+        this.currentUser = null;
+        this.token = null;
+        localStorage.removeItem('auth_session');
     }
 }
 
