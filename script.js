@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async getChats() {
             try {
-                console.log('Buscando chats...');
+                // console.log('Buscando chats...');
                 const response = await this.request('/chats');
                 // console.log('Chats recebidos:', response);
                 return response;
@@ -405,6 +405,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         sortedMessages.forEach(message => {
             const messageElement = createMessageElement(message);
+            messageElement.dataset.id = message.id;
+            messageElement.dataset.time = message.time;
             messageArea.appendChild(messageElement);
         });
         
@@ -417,22 +419,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // Função para iniciar o polling de mensagens
     function startMessagePolling() {
         // Limpa qualquer polling anterior
-        if (state.messagePollingInterval) {
-            clearInterval(state.messagePollingInterval);
-        }
+        stopMessagePolling();
 
         // Inicia novo polling apenas se houver um chat selecionado
         if (state.currentChatId) {
             state.messagePollingInterval = setInterval(async () => {
                 try {
                     const messages = await api.getChatMessages(state.currentChatId);
+                    // console.log('Mensagens recebidas:', messages);
                     
-                    // Verifica se há mensagens novas
-                    const latestMessage = messages[messages.length - 1];
-                    if (latestMessage && (!state.lastMessageTimestamp || latestMessage.time > state.lastMessageTimestamp)) {
-                        displayMessages(messages);
-                        state.lastMessageTimestamp = latestMessage.time;
+                    if (!messages || messages.length === 0) return;
 
+                    // Obtém a última mensagem do chat atual
+                    const currentMessages = document.querySelectorAll('.chat-messages .message');
+                    const lastDisplayedMessage = currentMessages[currentMessages.length - 1];
+                    const lastDisplayedId = lastDisplayedMessage ? lastDisplayedMessage.dataset.id : null;
+                    const lastDisplayedTime = lastDisplayedMessage ? lastDisplayedMessage.dataset.time : null;
+                    
+                    // Obtém a última mensagem da API
+                    const latestMessage = messages[messages.length - 1];
+                    // console.log('Última mensagem exibida ID:', lastDisplayedId);
+                    // console.log('Última mensagem da API ID:', latestMessage.id);
+
+                    // Se não há mensagem exibida ou se a última mensagem é diferente, atualiza o chat
+                    if (!lastDisplayedId || lastDisplayedId !== latestMessage.id || lastDisplayedTime !== latestMessage.time) {
+                        // console.log('Atualizando mensagens do chat...');
+                        displayMessages(messages);
+                        
                         // Atualiza a prévia no chat
                         const chat = state.allChats.find(c => c.id === state.currentChatId);
                         if (chat) {
@@ -446,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (error) {
                     console.error('Erro ao atualizar mensagens:', error);
                 }
-            }, 1000);
+            }, 500); // Polling a cada meio segundo
         }
     }
 
@@ -490,11 +503,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        // Atualiza o ID do chat atual
+        // Para qualquer polling anterior
+        stopMessagePolling();
+
+        // Atualiza o ID do chat atual e reseta o timestamp
         state.currentChatId = chat.id;
+        state.lastMessageTimestamp = null;
         
         // Carrega as mensagens do chat
         await loadMessages(chat.id);
+
+        // Inicia o polling de mensagens para este chat
+        startMessagePolling();
         
         // Remove o badge de não lido
         const unreadBadge = selectedChat.querySelector('.unread-badge');
@@ -685,7 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadChats() {
         try {
             notifications.info('Carregando chats...');
-            console.log('Iniciando carregamento de chats...');
+            // console.log('Iniciando carregamento de chats...');
             
             const response = await api.getChats();
             // console.log('Resposta completa:', response);
