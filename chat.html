@@ -8,6 +8,23 @@
     <link rel="stylesheet" href="./styles.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        /* Animação de rotação para o ícone de loading */
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .rotating {
+            animation: rotate 1s linear infinite;
+        }
+        
+        /* Estilo para botão desabilitado */
+        .toggle-ai-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -57,8 +74,10 @@
                     </div>
                 </div>
                 <button class="toggle-ai-button" style="display: none;">
-                    <i class="fas fa-robot"></i>
-                    <span class="button-text">Pausar IA</span>
+                    <div class="button-content">
+                        <i class="material-icons">smart_toy</i>
+                        <span class="button-text">Pausar IA</span>
+                    </div>
                 </button>
             </div>
 

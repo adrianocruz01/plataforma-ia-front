@@ -429,6 +429,14 @@ body {
     border-left-color: rgba(0, 0, 0, 0.2);
 }
 
+.button-content {
+    display: flex;               /* Ativa o modelo flexbox */
+    justify-content: center;     /* Centraliza horizontalmente */
+    align-items: center;         /* Centraliza verticalmente */
+    gap: 8px;                    /* Adiciona um espaço entre o ícone e o texto (opcional) */
+}
+
+
 .toggle-ai-button {
     padding: 8px 16px;
     border: none;

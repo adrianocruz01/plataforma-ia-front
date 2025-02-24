@@ -263,26 +263,35 @@ document.addEventListener('DOMContentLoaded', () => {
             this.chatId = null;
             this.isHumanMode = false;
             this.onAIStateChangeCallbacks = [];
+            this.isLoading = false;
         }
 
         initialize(chatId, humanTalk) {
             this.chatId = chatId;
             this.isHumanMode = humanTalk;
+            this.isLoading = false;
             this.notifyAIStateChange();
         }
 
         async toggleAIMode() {
+            if (this.isLoading) return; // Previne múltiplos cliques
+            
             try {
+                this.isLoading = true;
+                this.notifyAIStateChange();
+                
                 if (this.isHumanMode) {
                     await this.api.stopHumanTalk(this.chatId);
                 } else {
                     await this.api.startHumanTalk(this.chatId);
                 }
                 this.isHumanMode = !this.isHumanMode;
-                this.notifyAIStateChange();
             } catch (error) {
                 console.error('Erro ao alternar modo IA:', error);
                 throw error;
+            } finally {
+                this.isLoading = false;
+                this.notifyAIStateChange();
             }
         }
 
@@ -291,7 +300,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         notifyAIStateChange() {
-            this.onAIStateChangeCallbacks.forEach(callback => callback({ isHumanMode: this.isHumanMode }));
+            this.onAIStateChangeCallbacks.forEach(callback => 
+                callback({ 
+                    isHumanMode: this.isHumanMode,
+                    isLoading: this.isLoading 
+                })
+            );
         }
     }
 
@@ -315,10 +329,10 @@ document.addEventListener('DOMContentLoaded', () => {
     state.aiController = new AIController(api);
 
     // Registra callback para mudanças de estado da IA
-    state.aiController.onAIStateChange(({ isHumanMode }) => {
+    state.aiController.onAIStateChange(({ isHumanMode, isLoading }) => {
         const toggleButton = document.querySelector('.toggle-ai-button');
         if (toggleButton) {
-            toggleButton.className = `toggle-ai-button ${isHumanMode ? 'paused' : ''}`;
+            toggleButton.className = `toggle-ai-button ${isHumanMode ? 'paused' : ''} ${isLoading ? 'loading' : ''}`;
             toggleButton.querySelector('.button-text').textContent = 
                 isHumanMode ? 'Ativar IA' : 'Pausar IA';
         }
@@ -529,14 +543,29 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Adiciona o event listener para o botão
             toggleButton.onclick = async () => {
+                const buttonContent = toggleButton.querySelector('.button-content');
+                const originalHtml = buttonContent.innerHTML;
+                
                 try {
+                    // Desabilita o botão e mostra loading
+                    toggleButton.disabled = true;
+                    buttonContent.innerHTML = `
+                        <i class="material-icons">cached</i>
+                        <span class="button-text">Aguarde...</span>
+                    `;
+                    buttonContent.querySelector('i').classList.add('rotating');
+                    
                     await state.aiController.toggleAIMode();
                 } catch (error) {
                     console.error('Erro ao alternar modo IA:', error);
                     notifications.error('Erro ao alternar modo IA. Tente novamente.');
+                } finally {
+                    // Restaura o estado original do botão
+                    toggleButton.disabled = false;
+                    buttonContent.innerHTML = originalHtml;
                 }
             };
-
+            
             // Atualiza o ID do chat atual e reseta o timestamp
             state.currentChatId = chat.id;
             state.lastMessageTimestamp = null;
@@ -606,8 +635,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Se este é o chat atual, atualiza a interface de mensagens
                             if (newChat.id === state.currentChatId) {
                                 const currentMessages = document.querySelectorAll('.chat-messages .message');
-                                const lastDisplayedId = currentMessages.length > 0 ? 
-                                    currentMessages[currentMessages.length - 1].dataset.id : null;
+                                const lastDisplayedMessage = currentMessages[currentMessages.length - 1];
+                                const lastDisplayedId = lastDisplayedMessage ? lastDisplayedMessage.dataset.id : null;
                                 
                                 if (!lastDisplayedId || lastDisplayedId !== lastMessage.id) {
                                     displayMessages(messages);
@@ -998,13 +1027,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Atualiza o ícone
         const themeIcon = document.querySelector('.theme-toggle-button .material-icons');
-        themeIcon.textContent = state.theme === 'dark' ? 'dark_mode' : 'light_mode';
+        themeIcon.textContent = state.theme === 'dark' ? 'light_mode' : 'dark_mode';
     }
 
     // Inicialização
     document.documentElement.setAttribute('data-theme', state.theme);
     const themeIcon = document.querySelector('.theme-toggle-button .material-icons');
-    themeIcon.textContent = state.theme === 'dark' ? 'dark_mode' : 'light_mode';
+    themeIcon.textContent = state.theme === 'dark' ? 'light_mode' : 'dark_mode';
 
     document.querySelector('.theme-toggle-button').addEventListener('click', toggleTheme);
 
