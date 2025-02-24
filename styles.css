@@ -418,6 +418,15 @@ body {
 
 .phone-number {
     color: var(--color-text-secondary);
+    margin-left: 8px;
+    padding-left: 8px;
+    border-left: 1px solid var(--color-text-secondary);
+    display: inline-block;
+}
+
+:root[data-theme="light"] .phone-number {
+    color: rgba(0, 0, 0, 0.7);
+    border-left-color: rgba(0, 0, 0, 0.2);
 }
 
 .toggle-ai-button {

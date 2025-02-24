@@ -423,27 +423,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Inicia novo polling apenas se houver um chat selecionado
         if (state.currentChatId) {
+            let currentPollingChatId = state.currentChatId; // Armazena o ID do chat atual
+
             state.messagePollingInterval = setInterval(async () => {
                 try {
+                    // Verifica se o chat mudou desde o último polling
+                    if (currentPollingChatId !== state.currentChatId) {
+                        stopMessagePolling();
+                        return;
+                    }
+
                     const messages = await api.getChatMessages(state.currentChatId);
-                    // console.log('Mensagens recebidas:', messages);
                     
+                    // Verifica novamente se o chat não mudou durante a requisição
+                    if (currentPollingChatId !== state.currentChatId) {
+                        return;
+                    }
+
                     if (!messages || messages.length === 0) return;
 
                     // Obtém a última mensagem do chat atual
                     const currentMessages = document.querySelectorAll('.chat-messages .message');
                     const lastDisplayedMessage = currentMessages[currentMessages.length - 1];
                     const lastDisplayedId = lastDisplayedMessage ? lastDisplayedMessage.dataset.id : null;
-                    const lastDisplayedTime = lastDisplayedMessage ? lastDisplayedMessage.dataset.time : null;
                     
                     // Obtém a última mensagem da API
                     const latestMessage = messages[messages.length - 1];
-                    // console.log('Última mensagem exibida ID:', lastDisplayedId);
-                    // console.log('Última mensagem da API ID:', latestMessage.id);
 
                     // Se não há mensagem exibida ou se a última mensagem é diferente, atualiza o chat
-                    if (!lastDisplayedId || lastDisplayedId !== latestMessage.id || lastDisplayedTime !== latestMessage.time) {
-                        // console.log('Atualizando mensagens do chat...');
+                    if (!lastDisplayedId || lastDisplayedId !== latestMessage.id) {
                         displayMessages(messages);
                         
                         // Atualiza a prévia no chat
@@ -459,7 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (error) {
                     console.error('Erro ao atualizar mensagens:', error);
                 }
-            }, 500); // Polling a cada meio segundo
+            }, 2000); // Aumentado para 2 segundos para reduzir a carga
         }
     }
 
@@ -472,54 +480,82 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function selectChat(chat) {
-        // Remove a classe active de todos os chats
-        document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
-        
-        // Adiciona a classe active ao chat selecionado
-        const selectedChat = document.querySelector(`.chat-item[data-id="${chat.id}"]`);
-        if (selectedChat) {
-            selectedChat.classList.add('active');
-        }
-
-        // Atualiza o cabeçalho do chat com o avatar
-        const avatarUrl = chat.picture || chat.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(chat.name)}&background=random`;
-        document.querySelector('.chat-header .chat-avatar img').src = avatarUrl;
-        document.querySelector('.chat-header .chat-header-name').textContent = chat.name;
-
-        // Configura o botão de toggle da IA
-        const toggleButton = document.querySelector('.toggle-ai-button');
-        toggleButton.style.display = 'flex';
-        
-        // Inicializa o controlador da IA com o estado atual do chat
-        state.aiController.initialize(chat.id, chat.humanTalk);
-        
-        // Adiciona o event listener para o botão
-        toggleButton.onclick = async () => {
-            try {
-                await state.aiController.toggleAIMode();
-            } catch (error) {
-                console.error('Erro ao alternar modo IA:', error);
-                notifications.error('Erro ao alternar modo IA. Tente novamente.');
+        try {
+            // Para qualquer polling anterior antes de tudo
+            stopMessagePolling();
+            
+            // Remove a classe active de todos os chats
+            document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+            
+            // Adiciona a classe active ao chat selecionado
+            const selectedChat = document.querySelector(`.chat-item[data-id="${chat.id}"]`);
+            if (selectedChat) {
+                selectedChat.classList.add('active');
             }
-        };
 
-        // Para qualquer polling anterior
-        stopMessagePolling();
+            notifications.info(`Carregando chat do ${chat.name}`);
+            // Limpa as mensagens existentes antes de carregar as novas
+            messageArea.innerHTML = '';
 
-        // Atualiza o ID do chat atual e reseta o timestamp
-        state.currentChatId = chat.id;
-        state.lastMessageTimestamp = null;
-        
-        // Carrega as mensagens do chat
-        await loadMessages(chat.id);
+            // Atualiza o cabeçalho do chat com o avatar
+            const avatarUrl = chat.picture || chat.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(chat.name)}&background=random`;
+            document.querySelector('.chat-header .chat-avatar img').src = avatarUrl;
+            document.querySelector('.chat-header .chat-header-name').textContent = chat.name;
 
-        // Inicia o polling de mensagens para este chat
-        startMessagePolling();
-        
-        // Remove o badge de não lido
-        const unreadBadge = selectedChat.querySelector('.unread-badge');
-        if (unreadBadge) {
-            unreadBadge.style.display = 'none';
+            // Adiciona o número de telefone formatado
+            const phoneElement = document.querySelector('.chat-header-status .phone-number');
+            if (phoneElement) {
+                // Verifica se o chat tem um número de telefone válido
+                console.log(chat.whatsappPhone);
+                if (chat.whatsappPhone && typeof chat.whatsappPhone === 'string' && chat.whatsappPhone.trim() !== '') {
+                    const formattedPhone = formatPhoneNumber(chat.whatsappPhone.trim());
+                    if (formattedPhone) {
+                        phoneElement.textContent = formattedPhone;
+                        phoneElement.style.display = 'inline-block';
+                    } else {
+                        phoneElement.style.display = 'none';
+                    }
+                } else {
+                    phoneElement.style.display = 'none';
+                }
+            }
+
+            // Configura o botão de toggle da IA
+            const toggleButton = document.querySelector('.toggle-ai-button');
+            toggleButton.style.display = 'flex';
+            
+            // Inicializa o controlador da IA com o estado atual do chat
+            state.aiController.initialize(chat.id, chat.humanTalk);
+            
+            // Adiciona o event listener para o botão
+            toggleButton.onclick = async () => {
+                try {
+                    await state.aiController.toggleAIMode();
+                } catch (error) {
+                    console.error('Erro ao alternar modo IA:', error);
+                    notifications.error('Erro ao alternar modo IA. Tente novamente.');
+                }
+            };
+
+            // Atualiza o ID do chat atual e reseta o timestamp
+            state.currentChatId = chat.id;
+            state.lastMessageTimestamp = null;
+            
+            // Carrega as mensagens do chat
+            await loadMessages(chat.id);
+
+            // Inicia o polling de mensagens para este chat
+            startMessagePolling();
+            
+            notifications.success('Chat carregado com sucesso!');
+            // Remove o badge de não lido
+            const unreadBadge = selectedChat.querySelector('.unread-badge');
+            if (unreadBadge) {
+                unreadBadge.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Erro ao selecionar chat:', error);
+            notifications.error('Erro ao carregar o chat. Tente novamente.');
         }
     }
 
@@ -556,6 +592,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                // Mapeia os chats para incluir as últimas mensagens
                 const updatedChats = await Promise.all(chats.map(async (newChat) => {
                     try {
                         // Busca as últimas mensagens de cada chat
@@ -563,8 +600,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (messages && messages.length > 0) {
                             const lastMessage = messages[messages.length - 1];
                             newChat.conversation = lastMessage.text;
-                            newChat.time = lastMessage.time;
+                            newChat.time = lastMessage.time || lastMessage.created_at;
                             newChat.conversationType = lastMessage.type || 'TEXT';
+                            
+                            // Se este é o chat atual, atualiza a interface de mensagens
+                            if (newChat.id === state.currentChatId) {
+                                const currentMessages = document.querySelectorAll('.chat-messages .message');
+                                const lastDisplayedId = currentMessages.length > 0 ? 
+                                    currentMessages[currentMessages.length - 1].dataset.id : null;
+                                
+                                if (!lastDisplayedId || lastDisplayedId !== lastMessage.id) {
+                                    displayMessages(messages);
+                                }
+                            }
                         }
                         return newChat;
                     } catch (error) {
@@ -573,27 +621,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }));
 
+                // Ordena os chats pela última mensagem
                 const sortedChats = sortChatsByLastMessage(updatedChats);
                 
-                // Verifica se há mudanças nos chats
-                if (JSON.stringify(sortedChats) !== JSON.stringify(state.allChats)) {
-                    // Mantém o estado de busca atual
-                    const currentSearch = state.currentSearchQuery;
-                    
-                    // Atualiza os chats
-                    state.allChats = sortedChats;
-                    
-                    // Se houver uma busca ativa, filtra os chats
-                    if (currentSearch) {
-                        filterChats(currentSearch);
-                    } else {
-                        renderChatList(state.allChats);
-                    }
+                // Atualiza o estado e a interface
+                state.allChats = sortedChats;
+                
+                // Se houver uma busca ativa, filtra os chats
+                if (state.currentSearchQuery) {
+                    filterChats(state.currentSearchQuery);
+                } else {
+                    renderChatList(state.allChats);
                 }
             } catch (error) {
                 console.error('Erro ao atualizar chats:', error);
             }
-        }, 1000);
+        }, 1000); // Polling a cada 1 segundo
     }
 
     // Função para filtrar chats
@@ -700,6 +743,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 month: '2-digit'
             });
         }
+    }
+
+    // Função para formatar número de telefone
+    function formatPhoneNumber(phone) {
+        if (!phone || typeof phone !== 'string') return '';
+        
+        // Remove todos os caracteres não numéricos
+        const numbers = phone.replace(/\D/g, '');
+        
+        // Se o número já tiver o código do país (+55), remove-o
+        let cleanedPhone = numbers.startsWith('55') ? numbers.slice(2) : numbers;
+        
+        // Se não tiver números suficientes após a remoção, retorna vazio
+        if (cleanedPhone.length < 10) return '';
+        
+        // Adiciona o código do Brasil (+55) no início
+        const countryCode = '+55 ';
+        
+        // Verifica o tamanho para determinar se é celular ou fixo
+        if (cleanedPhone.length === 11) {
+            // Celular: +55 (XX) XXXXX-XXXX
+            return `${countryCode}(${cleanedPhone.slice(0,2)}) ${cleanedPhone.slice(2,7)}-${cleanedPhone.slice(7)}`;
+        } else if (cleanedPhone.length === 10) {
+            // Fixo: +55 (XX) XXXX-XXXX
+            return `${countryCode}(${cleanedPhone.slice(0,2)}) ${cleanedPhone.slice(2,6)}-${cleanedPhone.slice(6)}`;
+        }
+        
+        return ''; // Retorna vazio se não conseguir formatar
     }
 
     async function loadChats() {
