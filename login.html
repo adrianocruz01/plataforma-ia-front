@@ -177,65 +177,30 @@
             </div>
             <button type="submit">Entrar</button>
             <div class="error-message" id="errorMessage"></div>
-            <div class="success-message" id="successMessage"></div>
-            <div class="loading">
-                <div class="spinner"></div>
-            </div>
         </form>
     </div>
 
-    <script>
-        // Configuração do ambiente
-        const API_CONFIG = {
-            development: {
-                BASE_URL: 'http://localhost:3000/api',
-            },
-            production: {
-                BASE_URL: 'https://api.trendgpt.com.br/api',
-            }
-        };
-
-        const ENV = window.location.hostname === 'localhost' ? 'development' : 'production';
-        const API_BASE_URL = API_CONFIG[ENV].BASE_URL;
-    </script>
+    <script src="./js/config.js"></script>
     <script src="./js/authController.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => { 
-            const auth = new AuthController();
-            const form = document.getElementById('loginForm');
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('loginForm');
             const errorMessage = document.getElementById('errorMessage');
-            const successMessage = document.getElementById('successMessage');
-            const loading = document.querySelector('.loading');
+            const auth = new AuthController();
 
-            // Se já estiver autenticado, redireciona
-            if (auth.isAuthenticated()) {
-                window.location.href = './chat.html';
-                return;
-            }
-
-            form.addEventListener('submit', async (e) => {
+            loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                
-                // Reset messages
                 errorMessage.style.display = 'none';
-                successMessage.style.display = 'none';
-                loading.style.display = 'flex';
 
                 const username = document.getElementById('username').value;
                 const password = document.getElementById('password').value;
 
                 try {
-                    await auth.login(username, password);
-                    successMessage.textContent = 'Login realizado com sucesso!';
-                    successMessage.style.display = 'block';
-                    setTimeout(() => {
-                        window.location.href = './chat.html';
-                    }, 1000);
+                    const result = await auth.login(username, password);
+                    window.location.href = './chat.html';
                 } catch (error) {
-                    errorMessage.textContent = error.message || 'Erro ao fazer login';
+                    errorMessage.textContent = error.message;
                     errorMessage.style.display = 'block';
-                } finally {
-                    loading.style.display = 'none';
                 }
             });
         });

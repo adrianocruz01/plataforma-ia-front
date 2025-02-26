@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treinamentos - Trend GPT</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/training.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <img src="assets/logo-icon-sidebar.png" alt="Trend GPT Logo">
+            <h1>Treinamentos</h1>
+            <div class="header-actions">
+                <button id="back-to-chat" title="Voltar para o chat" onclick="window.location.href='/chat'">
+                    <span class="material-icons">chat</span>
+                </button>
+                <button id="theme-toggle" title="Alternar tema">
+                    <span class="material-icons">light_mode</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="tab-container">
+            <button class="tab-button active" data-type="TEXT">
+                Texto
+            </button>
+            <button class="tab-button" data-type="WEBSITE">
+                Website
+            </button>
+            <button class="tab-button disabled" data-type="VIDEO">
+                Vídeo
+            </button>
+            <button class="tab-button disabled" data-type="DOCUMENT">
+                Documento
+            </button>
+        </div>
+
+        <div class="input-area">
+            <div class="input-container">
+                <div class="input-title">
+                    <span class="material-icons">post_add</span>
+                    Novo treinamento via texto
+                </div>
+                <textarea id="trainingPrompt" placeholder="Escreva uma afirmação e tecle enter para cadastrar..."></textarea>
+                <span class="character-count">0/1028</span>
+            </div>
+            <button class="add-training-button">
+                <span>Cadastrar</span>
+            </button>
+        </div>
+
+        <div class="training-list">
+            <!-- Os itens serão inseridos aqui via JavaScript -->
+        </div>
+    </div>
+
+    <!-- Modal de Edição -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Editar Treinamento</h3>
+                <button class="close-button" onclick="trainingController.closeEditModal()">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <textarea id="editTrainingText" placeholder="Digite o novo texto do treinamento..."></textarea>
+                <span class="character-count">0/1028</span>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-button" onclick="trainingController.closeEditModal()">Cancelar</button>
+                <button class="save-button" onclick="trainingController.saveTrainingEdit()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/trainingController.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Controle do tema
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeIcon = themeToggle.querySelector('.material-icons');
+            
+            function updateThemeIcon(isDark) {
+                themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+            }
+
+            themeToggle.addEventListener('click', () => {
+                const html = document.documentElement;
+                const isDark = html.getAttribute('data-theme') === 'dark';
+                const newTheme = isDark ? 'light' : 'dark';
+                
+                html.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateThemeIcon(newTheme === 'dark');
+            });
+
+            // Carrega o tema salvo
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme === 'dark');
+        });
+    </script>
+</body>
+</html>

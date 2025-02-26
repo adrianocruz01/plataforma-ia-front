@@ -17,7 +17,6 @@ class AuthController {
                 this._notifyStateChange();
             } catch (error) {
                 console.error('Erro ao recuperar sessão:', error);
-                this.logout();
             }
         }
     }
@@ -25,7 +24,7 @@ class AuthController {
     // Login do usuário
     async login(username, password) {
         try {
-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            const response = await fetch(`${window.config.API_BASE_URL}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -33,26 +32,22 @@ class AuthController {
                 body: JSON.stringify({ username, password })
             });
 
-            const data = await response.json();
             if (!response.ok) {
-                throw new Error(data.message || 'Credenciais inválidas');
+                throw new Error('Credenciais inválidas');
             }
-            
-            this.currentUser = {
-                id: data.user.id,
-                username: data.user.username,
-                role: data.user.role,
-                assistantId: data.user.assistantId
-            };
+
+            const data = await response.json();
+            this.currentUser = data.user;
             this.token = data.token;
 
+            // Salva a sessão
             localStorage.setItem('auth_session', JSON.stringify({
                 user: this.currentUser,
                 token: this.token
             }));
 
             this._notifyStateChange();
-            return true;
+            return data;
         } catch (error) {
             console.error('Erro no login:', error);
             throw error;
@@ -65,34 +60,20 @@ class AuthController {
         this.token = null;
         localStorage.removeItem('auth_session');
         this._notifyStateChange();
+        window.location.href = 'login.html';
     }
 
     // Verifica se o usuário está autenticado
     isAuthenticated() {
-        return !!this.currentUser && !!this.token;
+        return !!this.token;
     }
 
-    // Verifica se o usuário é admin
-    isAdmin() {
-        return this.currentUser?.role === 'admin';
-    }
-
-    // Verifica se o usuário é atendente
-    isAttendant() {
-        return this.currentUser?.role === 'attendant';
-    }
-
-    // Retorna o ID do assistente associado ao atendente
-    getAssistantId() {
-        return this.currentUser?.assistantId;
-    }
-
-    // Registra callback para mudanças de estado
-    onStateChange(callback) {
+    // Define o callback para mudança de estado
+    onAuthChange(callback) {
         this.onAuthStateChange = callback;
     }
 
-    // Notifica mudanças de estado
+    // Notifica mudança de estado
     _notifyStateChange() {
         if (this.onAuthStateChange) {
             this.onAuthStateChange(this.isAuthenticated());

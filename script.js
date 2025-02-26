@@ -1,26 +1,252 @@
-// Configuração do ambiente
-const API_CONFIG = {
-    // Em desenvolvimento
-    development: {
-        BASE_URL: 'http://localhost:3000/api',
-        GPT_MAKER_URL: 'http://localhost:3000/api'
-    },
-    // Em produção
-    production: {
-        BASE_URL: 'https://api.trendgpt.com.br/api',  // URL correta do backend
-        GPT_MAKER_URL: 'https://api.trendgpt.com.br/api'
+// Classe para gerenciar o estado da aplicação
+class ChatState {
+    constructor() {
+        this.currentChatId = null;
+        this.lastMessageTimestamp = null;
+        this.pollingInterval = null;
+        this.chatPollingInterval = null;
+        this.allChats = [];
+        this.currentSearchQuery = '';
     }
-};
+}
 
-// Define o ambiente atual
-const ENV = window.location.hostname === 'localhost' ? 'development' : 'production';
-const API_BASE_URL = API_CONFIG[ENV].BASE_URL;
-const GPT_MAKER_BASE_URL = API_CONFIG[ENV].GPT_MAKER_URL;
+// Classe para gerenciar a API do GPT Maker
+class GPTMakerAPI {
+    constructor() {
+        this.token = this.getToken();
+    }
+
+    getToken() {
+        return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJncHRtYWtlciIsImlkIjoiM0Q5NUZDNzM1MkJGNTE3NTE1ODFFNjk0QjVDNkY4MDAiLCJ0ZW5hbnQiOiIzRDk1RkM3MzUyQkY1MTc1MTU4MUU2OTRCNUM2RjgwMCIsInV1aWQiOiJkZGY5NTJiZC00OGRiLTRhYzAtODM4Yy1iZmI3NjM2M2E5NGIifQ.91lFHmSycVZq9AF4JLXo2y3fRws4oDeTya0dd7UbCaE';
+    }
+
+    async request(endpoint, options = {}) {
+        try {
+            const response = await fetch(`${window.config.API_BASE_URL}${endpoint}`, {
+                ...options,
+                headers: {
+                    ...options.headers,
+                    'Authorization': `Bearer ${this.token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const text = await response.text();
+
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                console.error('Erro ao fazer parse da resposta:', e);
+                throw new Error('Resposta inválida do servidor');
+            }
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Erro na requisição');
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Erro na requisição:', error);
+            throw error;
+        }
+    }
+
+    async uploadAudio(audioBlob) {
+        const formData = new FormData();
+        formData.append('file', audioBlob, 'audio.wav');
+        
+        const response = await fetch(`${window.config.API_BASE_URL}/upload-audio`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.token}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao fazer upload do áudio');
+        }
+
+        const data = await response.json();
+        return data.url;
+    }
+
+    async uploadImage(imageFile) {
+        const formData = new FormData();
+        formData.append('file', imageFile, imageFile.name);
+        
+        const response = await fetch(`${window.config.API_BASE_URL}/upload-image`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.token}`
+            },
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            console.error('Erro detalhado:', error);
+            throw new Error(error.error || 'Erro ao fazer upload da imagem');
+        }
+        
+        const data = await response.json();
+        return data.url;
+    }
+
+    async getChats() {
+        try {
+            const response = await this.request('/chats');
+            return response;
+        } catch (error) {
+            console.error('Erro ao buscar chats:', error);
+            throw error;
+        }
+    }
+
+    async getChatMessages(chatId) {
+        return this.request(`/chats/${chatId}/messages?pageSize=2000`);
+    }
+
+    async sendMessage(chatId, message) {
+        const body = typeof message === 'string' 
+            ? { message } 
+            : message;
+
+        const response = await this.request(`/chats/${chatId}/send-message`, {
+            method: 'POST',
+            body: JSON.stringify(body)
+        });
+
+        return response;
+    }
+
+    async startHumanTalk(chatId) {
+        return this.request(`/chat/${chatId}/start-human-talk`, {
+            method: 'PUT'
+        });
+    }
+
+    async stopHumanTalk(chatId) {
+        return this.request(`/chat/${chatId}/stop-human-talk`, {
+            method: 'PUT'
+        });
+    }
+}
+
+// Classe para gerenciar notificações
+class NotificationManager {
+    constructor() {
+        this.container = this.createContainer();
+    }
+
+    createContainer() {
+        const container = document.createElement('div');
+        container.className = 'notification-container';
+        document.body.appendChild(container);
+        return container;
+    }
+
+    show(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+
+        this.container.appendChild(notification);
+
+        setTimeout(() => {
+            notification.classList.add('fade-out');
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 3000);
+    }
+
+    error(message) {
+        this.show(message, 'error');
+    }
+
+    success(message) {
+        this.show(message, 'success');
+    }
+
+    info(message) {
+        this.show(message, 'info');
+    }
+}
+
+// Classe para gerenciar gravação de áudio
+class AudioRecorder {
+    constructor() {
+        this.mediaRecorder = null;
+        this.audioChunks = [];
+        this.isRecording = false;
+        this.stream = null;
+    }
+
+    async startRecording() {
+        try {
+            this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            this.mediaRecorder = new MediaRecorder(this.stream);
+            
+            this.mediaRecorder.ondataavailable = this.ondataavailable.bind(this);
+            this.mediaRecorder.onstop = this.onstop.bind(this);
+            
+            this.audioChunks = [];
+            this.mediaRecorder.start();
+            this.isRecording = true;
+            
+            return true;
+        } catch (error) {
+            console.error('Erro ao iniciar gravação:', error);
+            return false;
+        }
+    }
+
+    ondataavailable(event) {
+        this.audioChunks.push(event.data);
+    }
+
+    stopRecording() {
+        return new Promise((resolve) => {
+            this.mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
+                this.isRecording = false;
+                
+                // Libera a stream
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                }
+                
+                resolve(audioBlob);
+            };
+            
+            this.mediaRecorder.stop();
+        });
+    }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     // Inicializa autenticação
     const auth = new AuthController();
     auth.initialize();
+
+    // Inicializa os controllers
+    const api = new GPTMakerAPI();
+    const notifications = new NotificationManager();
+    const audioRecorder = new AudioRecorder();
+    const aiController = new window.AIController(api);
+
+    // Registra callback para mudanças de estado da IA
+    aiController.onAIStateChange(({ isHumanMode, isLoading }) => {
+        const toggleButton = document.querySelector('.toggle-ai-button');
+        if (toggleButton) {
+            toggleButton.className = `toggle-ai-button ${isHumanMode ? 'paused' : ''} ${isLoading ? 'loading' : ''}`;
+            toggleButton.querySelector('.button-text').textContent = 
+                isHumanMode ? 'Ativar IA' : 'Pausar IA';
+        }
+    });
 
     // Elementos do DOM
     const chatList = document.querySelector('.chat-list');
@@ -32,283 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const attachButton = document.querySelector('.attach-button');
     const imageInput = document.querySelector('#imageInput');
 
-    // Classe para gerenciar o estado da aplicação
-    class ChatState {
-        constructor() {
-            this.currentChatId = null;
-            this.lastMessageTimestamp = null;
-            this.pollingInterval = null;
-            this.chatPollingInterval = null;
-            this.allChats = [];
-            this.currentSearchQuery = '';
-        }
-    }
-
-    // Classe para gerenciar a API do GPT Maker
-    class GPTMakerAPI {
-        constructor() {
-            this.token = this.getToken();
-        }
-
-        getToken() {
-            return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJncHRtYWtlciIsImlkIjoiM0Q5NUZDNzM1MkJGNTE3NTE1ODFFNjk0QjVDNkY4MDAiLCJ0ZW5hbnQiOiIzRDk1RkM3MzUyQkY1MTc1MTU4MUU2OTRCNUM2RjgwMCIsInV1aWQiOiJkZGY5NTJiZC00OGRiLTRhYzAtODM4Yy1iZmI3NjM2M2E5NGIifQ.91lFHmSycVZq9AF4JLXo2y3fRws4oDeTya0dd7UbCaE';
-        }
-
-        async request(endpoint, options = {}) {
-            try {
-                // console.log('Fazendo requisição para:', `${API_BASE_URL}${endpoint}`);
-                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-                    ...options,
-                    headers: {
-                        ...options.headers,
-                        'Authorization': `Bearer ${this.token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                const text = await response.text();
-                // console.log('Resposta recebida:', text);
-
-                let data;
-                try {
-                    data = JSON.parse(text);
-                } catch (e) {
-                    console.error('Erro ao fazer parse da resposta:', e);
-                    throw new Error('Resposta inválida do servidor');
-                }
-
-                if (!response.ok) {
-                    throw new Error(data.error || 'Erro na requisição');
-                }
-
-                return data;
-            } catch (error) {
-                console.error('Erro na requisição:', error);
-                throw error;
-            }
-        }
-
-        async uploadAudio(audioBlob) {
-            const formData = new FormData();
-            formData.append('file', audioBlob, 'audio.wav');
-            
-            const response = await fetch(`${API_BASE_URL}/upload-audio`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.token}`
-                },
-                body: formData
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Erro ao fazer upload do áudio');
-            }
-
-            const data = await response.json();
-            return data.url;
-        }
-
-        async uploadImage(imageFile) {
-            const formData = new FormData();
-            formData.append('file', imageFile, imageFile.name);
-            
-            const response = await fetch(`${API_BASE_URL}/upload-image`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.token}`
-                },
-                body: formData
-            });
-            
-            if (!response.ok) {
-                const error = await response.json();
-                console.error('Erro detalhado:', error);
-                throw new Error(error.error || 'Erro ao fazer upload da imagem');
-            }
-            
-            const data = await response.json();
-            return data.url;
-        }
-
-        async getChats() {
-            try {
-                // console.log('Buscando chats...');
-                const response = await this.request('/chats');
-                // console.log('Chats recebidos:', response);
-                return response;
-            } catch (error) {
-                console.error('Erro ao buscar chats:', error);
-                throw error;
-            }
-        }
-
-        async getChatMessages(chatId) {
-            return this.request(`/chats/${chatId}/messages?pageSize=2000`);
-        }
-
-        async sendMessage(chatId, message) {
-            const body = typeof message === 'string' 
-                ? { message } 
-                : message;
-
-            const response = await this.request(`/chats/${chatId}/send-message`, {
-                method: 'POST',
-                body: JSON.stringify(body)
-            });
-
-            return response;
-        }
-
-        async startHumanTalk(chatId) {
-            return this.request(`/chat/${chatId}/start-human-talk`, {
-                method: 'PUT'
-            });
-        }
-
-        async stopHumanTalk(chatId) {
-            return this.request(`/chat/${chatId}/stop-human-talk`, {
-                method: 'PUT'
-            });
-        }
-    }
-
-    // Classe para gerenciar notificações
-    class NotificationManager {
-        constructor() {
-            this.container = this.createContainer();
-        }
-
-        createContainer() {
-            const container = document.createElement('div');
-            container.className = 'notification-container';
-            document.body.appendChild(container);
-            return container;
-        }
-
-        show(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.textContent = message;
-
-            this.container.appendChild(notification);
-
-            // Remove após 5 segundos
-            setTimeout(() => {
-                notification.classList.add('fade-out');
-                setTimeout(() => {
-                    this.container.removeChild(notification);
-                }, 300);
-            }, 5000);
-        }
-
-        error(message) {
-            this.show(message, 'error');
-        }
-
-        success(message) {
-            this.show(message, 'success');
-        }
-
-        info(message) {
-            this.show(message, 'info');
-        }
-    }
-
-    class AudioRecorder {
-        constructor() {
-            this.mediaRecorder = null;
-            this.audioChunks = [];
-            this.isRecording = false;
-            this.stream = null;
-        }
-
-        async startRecording() {
-            try {
-                this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                this.mediaRecorder = new MediaRecorder(this.stream);
-                this.audioChunks = [];
-
-                this.mediaRecorder.ondataavailable = (event) => {
-                    this.audioChunks.push(event.data);
-                };
-
-                this.mediaRecorder.start();
-                this.isRecording = true;
-                return true;
-            } catch (error) {
-                console.error('Erro ao iniciar gravação:', error);
-                notifications.error('Erro ao iniciar gravação. Verifique as permissões do microfone.');
-                return false;
-            }
-        }
-
-        stopRecording() {
-            return new Promise((resolve) => {
-                this.mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
-                    resolve(audioBlob);
-                };
-
-                this.mediaRecorder.stop();
-                this.stream.getTracks().forEach(track => track.stop());
-                this.isRecording = false;
-            });
-        }
-    }
-
-    class AIController {
-        constructor(api) {
-            this.api = api;
-            this.chatId = null;
-            this.isHumanMode = false;
-            this.onAIStateChangeCallbacks = [];
-            this.isLoading = false;
-        }
-
-        initialize(chatId, humanTalk) {
-            this.chatId = chatId;
-            this.isHumanMode = humanTalk;
-            this.isLoading = false;
-            this.notifyAIStateChange();
-        }
-
-        async toggleAIMode() {
-            if (this.isLoading) return; // Previne múltiplos cliques
-            
-            try {
-                this.isLoading = true;
-                this.notifyAIStateChange();
-                
-                if (this.isHumanMode) {
-                    await this.api.stopHumanTalk(this.chatId);
-                } else {
-                    await this.api.startHumanTalk(this.chatId);
-                }
-                this.isHumanMode = !this.isHumanMode;
-            } catch (error) {
-                console.error('Erro ao alternar modo IA:', error);
-                throw error;
-            } finally {
-                this.isLoading = false;
-                this.notifyAIStateChange();
-            }
-        }
-
-        onAIStateChange(callback) {
-            this.onAIStateChangeCallbacks.push(callback);
-        }
-
-        notifyAIStateChange() {
-            this.onAIStateChangeCallbacks.forEach(callback => 
-                callback({ 
-                    isHumanMode: this.isHumanMode,
-                    isLoading: this.isLoading 
-                })
-            );
-        }
-    }
-
+    // Estado da aplicação
     const state = {
         currentChatId: null,
         chatPollingInterval: null,
@@ -316,27 +266,9 @@ document.addEventListener('DOMContentLoaded', () => {
         recording: false,
         mediaRecorder: null,
         audioChunks: [],
-        aiController: null,
         theme: localStorage.getItem('theme') || 'dark',
         selectedAgent: 'all'
     };
-
-    const api = new GPTMakerAPI();
-    const notifications = new NotificationManager();
-    const audioRecorder = new AudioRecorder();
-
-    // Inicializa o controlador da IA
-    state.aiController = new AIController(api);
-
-    // Registra callback para mudanças de estado da IA
-    state.aiController.onAIStateChange(({ isHumanMode, isLoading }) => {
-        const toggleButton = document.querySelector('.toggle-ai-button');
-        if (toggleButton) {
-            toggleButton.className = `toggle-ai-button ${isHumanMode ? 'paused' : ''} ${isLoading ? 'loading' : ''}`;
-            toggleButton.querySelector('.button-text').textContent = 
-                isHumanMode ? 'Ativar IA' : 'Pausar IA';
-        }
-    });
 
     // Event listener para o botão de anexar
     attachButton.addEventListener('click', () => {
@@ -539,7 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleButton.style.display = 'flex';
             
             // Inicializa o controlador da IA com o estado atual do chat
-            state.aiController.initialize(chat.id, chat.humanTalk);
+            aiController.initialize(chat.id, chat.humanTalk);
             
             // Adiciona o event listener para o botão
             toggleButton.onclick = async () => {
@@ -555,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                     buttonContent.querySelector('i').classList.add('rotating');
                     
-                    await state.aiController.toggleAIMode();
+                    await aiController.toggleAIMode();
                 } catch (error) {
                     console.error('Erro ao alternar modo IA:', error);
                     notifications.error('Erro ao alternar modo IA. Tente novamente.');
